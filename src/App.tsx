@@ -6,6 +6,8 @@ import Browse from '@/pages/Browse'
 import TitleDetail from '@/pages/TitleDetail'
 import Reader from '@/pages/Reader'
 import Profile from '@/pages/Profile'
+import Login from '@/pages/Login'
+import Signup from '@/pages/Signup'
 
 function MainLayout({ children }: { children: React.ReactNode }) {
     return (
@@ -22,6 +24,10 @@ export default function App() {
         <Routes>
             {/* Reader has its own fullscreen layout */}
             <Route path="/manga/:slug/chapter/:chapterNum" element={<Reader />} />
+
+            {/* Auth pages with minimal layout */}
+            <Route path="/login" element={<MainLayout><Login /></MainLayout>} />
+            <Route path="/signup" element={<MainLayout><Signup /></MainLayout>} />
 
             {/* All other pages share the Navbar + Footer layout */}
             <Route

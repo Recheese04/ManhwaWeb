@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Search, Menu, X, BookOpen, User, Bell, Sun, Moon } from 'lucide-react'
+import { Search, Menu, X, BookOpen, User, Bell, Sun, Moon, LogIn } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useTheme } from '@/lib/ThemeContext'
+import { useAuth } from '@/lib/AuthContext'
 import { cn } from '@/lib/utils'
 import MobileDrawer from './MobileDrawer'
 
@@ -20,6 +21,7 @@ export default function Navbar() {
     const [drawerOpen, setDrawerOpen] = useState(false)
     const location = useLocation()
     const { theme, toggleTheme } = useTheme()
+    const { user } = useAuth()
 
     return (
         <>
@@ -75,11 +77,24 @@ export default function Navbar() {
                             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
                                 <Bell className="w-5 h-5" />
                             </Button>
-                            <Link to="/profile">
-                                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-                                    <User className="w-5 h-5" />
-                                </Button>
-                            </Link>
+
+                            {user ? (
+                                <Link to="/profile">
+                                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+                                        {user.photoURL ? (
+                                            <img src={user.photoURL} alt="" className="w-7 h-7 rounded-full" />
+                                        ) : (
+                                            <User className="w-5 h-5" />
+                                        )}
+                                    </Button>
+                                </Link>
+                            ) : (
+                                <Link to="/login">
+                                    <Button size="sm" className="gap-1.5">
+                                        <LogIn className="w-4 h-4" /> Sign In
+                                    </Button>
+                                </Link>
+                            )}
                         </div>
 
                         {/* Mobile Actions */}
