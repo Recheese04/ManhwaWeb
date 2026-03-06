@@ -209,7 +209,6 @@ export default function Browse() {
                     <Button
                         variant={filtersOpen ? 'default' : 'outline'}
                         size="icon"
-                        className="lg:hidden"
                         onClick={() => setFiltersOpen(!filtersOpen)}
                     >
                         <SlidersHorizontal className="w-4 h-4" />
@@ -239,15 +238,24 @@ export default function Browse() {
             )}
 
             <div className="flex gap-8">
-                <aside className="hidden lg:block w-64 shrink-0">
-                    <div className="sticky top-24 bg-card rounded-xl p-5 border border-border shadow-sm">
-                        <h2 className="text-base font-semibold mb-4 flex items-center gap-2">
-                            <SlidersHorizontal className="w-4 h-4" /> Filters
-                        </h2>
-                        <FilterPanel />
-                    </div>
-                </aside>
+                {/* Desktop Filter Sidebar - Toggleable */}
+                {filtersOpen && (
+                    <aside className="hidden lg:block w-64 shrink-0 animate-fade-in-fast">
+                        <div className="sticky top-24 bg-card rounded-xl p-5 border border-border shadow-sm">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-base font-semibold flex items-center gap-2">
+                                    <SlidersHorizontal className="w-4 h-4" /> Filters
+                                </h2>
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setFiltersOpen(false)}>
+                                    <X className="w-4 h-4" />
+                                </Button>
+                            </div>
+                            <FilterPanel />
+                        </div>
+                    </aside>
+                )}
 
+                {/* Mobile Filter Drawer */}
                 {filtersOpen && (
                     <div className="lg:hidden fixed inset-0 z-40">
                         <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setFiltersOpen(false)} />
