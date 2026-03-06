@@ -78,7 +78,7 @@ function getArtist(manga: any): string {
 }
 
 // Helper: Transform MangaDex manga to our format
-function transformManga(manga: any) {
+function transformManga(manga: any, chapterMap: Record<string, string> = {}) {
     const attrs = manga.attributes
     const tags = attrs.tags?.map((t: any) => t.attributes?.name?.en).filter(Boolean) || []
 
@@ -88,6 +88,9 @@ function transformManga(manga: any) {
     let type: 'manga' | 'manhwa' | 'manhua' = 'manga'
     if (origLang === 'ko') type = 'manhwa'
     else if (origLang === 'zh' || origLang === 'zh-hk') type = 'manhua'
+
+    const latestChapterId = attrs.latestUploadedChapter
+    const chapterNumber = latestChapterId && chapterMap[latestChapterId] ? chapterMap[latestChapterId] : null
 
     return {
         id: manga.id,
@@ -105,10 +108,40 @@ function transformManga(manga: any) {
         author: getAuthor(manga),
         artist: getArtist(manga),
         genres: tags.slice(0, 8),
-        latestChapter: attrs.latestUploadedChapter || null,
+        latestChapter: chapterNumber,
         createdAt: attrs.createdAt || new Date().toISOString(),
         updatedAt: attrs.updatedAt || new Date().toISOString(),
     }
+}
+
+// Helper: Batch fetch actual chapter numbers from a list of mangas
+async function fetchLatestChapterNumbers(mangas: any[]): Promise<Record<string, string>> {
+    const chapterMap: Record<string, string> = {}
+    const chapterIds = mangas
+        .map((m: any) => m.attributes?.latestUploadedChapter)
+        .filter(Boolean)
+
+    if (chapterIds.length > 0) {
+        // Slice to max 100 per request, MangaDex limit
+        const chapterUrl = new URL(`${MANGADEX_API}/chapter`)
+        const uniqueIds = Array.from(new Set(chapterIds)).slice(0, 100)
+        uniqueIds.forEach(id => chapterUrl.searchParams.append('ids[]', id as string))
+
+        try {
+            const chapRes = await fetch(chapterUrl.toString())
+            if (chapRes.ok) {
+                const chapData = await chapRes.json()
+                chapData.data?.forEach((c: any) => {
+                    if (c.attributes?.chapter) {
+                        chapterMap[c.id] = c.attributes.chapter
+                    }
+                })
+            }
+        } catch (err) {
+            console.error("Failed to fetch chapter numbers in batch", err)
+        }
+    }
+    return chapterMap
 }
 
 /**
@@ -160,7 +193,8 @@ router.get('/search', async (req: Request, res: Response) => {
         const response = await fetch(url.toString())
         const data = await response.json()
 
-        const results = (data.data || []).map(transformManga)
+        const chapterMap = await fetchLatestChapterNumbers(data.data || [])
+        const results = (data.data || []).map((m: any) => transformManga(m, chapterMap))
 
         res.json({
             data: results,
@@ -193,8 +227,10 @@ router.get('/popular', async (_req: Request, res: Response) => {
         const response = await fetch(url.toString())
         const data = await response.json()
 
+        const chapterMap = await fetchLatestChapterNumbers(data.data || [])
+
         res.json({
-            data: (data.data || []).map(transformManga),
+            data: (data.data || []).map((m: any) => transformManga(m, chapterMap)),
             total: data.total || 0,
         })
     } catch (error) {
@@ -222,8 +258,10 @@ router.get('/latest', async (_req: Request, res: Response) => {
         const response = await fetch(url.toString())
         const data = await response.json()
 
+        const chapterMap = await fetchLatestChapterNumbers(data.data || [])
+
         res.json({
-            data: (data.data || []).map(transformManga),
+            data: (data.data || []).map((m: any) => transformManga(m, chapterMap)),
             total: data.total || 0,
         })
     } catch (error) {
@@ -253,7 +291,8 @@ router.get('/:id', async (req: Request, res: Response) => {
             return
         }
 
-        res.json({ data: transformManga(data.data) })
+        const chapterMap = await fetchLatestChapterNumbers([data.data])
+        res.json({ data: transformManga(data.data, chapterMap) })
     } catch (error) {
         console.error('Manga detail error:', error)
         res.status(500).json({ error: 'Failed to get manga details' })
