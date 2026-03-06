@@ -37,9 +37,18 @@ function getCoverUrl(manga: any): string | null {
 // Helper: Extract title from manga
 function getTitle(manga: any): string {
     const attrs = manga.attributes
-    if (!attrs?.title) return 'Untitled'
+    if (!attrs) return 'Untitled'
 
-    // Priority: English -> English Romanized -> Japanese Romanized -> Japanese -> First available
+    // MangaDex often puts Romaji in the main `title.en`.
+    // The true, translated English name is usually in `altTitles`.
+    const enAltTitle = attrs.altTitles?.find((t: any) => t.en)
+    if (enAltTitle && enAltTitle.en) {
+        return enAltTitle.en
+    }
+
+    if (!attrs.title) return 'Untitled'
+
+    // Fallback Priority: English -> English Romanized -> Japanese Romanized -> Japanese -> First available
     return attrs.title.en ||
         attrs.title['en-ro'] ||
         attrs.title['ja-ro'] ||
