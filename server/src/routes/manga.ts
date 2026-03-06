@@ -37,7 +37,15 @@ function getCoverUrl(manga: any): string | null {
 // Helper: Extract title from manga
 function getTitle(manga: any): string {
     const attrs = manga.attributes
-    return attrs.title?.en || attrs.title?.['ja-ro'] || attrs.title?.ja || Object.values(attrs.title || {})[0] as string || 'Untitled'
+    if (!attrs?.title) return 'Untitled'
+
+    // Priority: English -> English Romanized -> Japanese Romanized -> Japanese -> First available
+    return attrs.title.en ||
+        attrs.title['en-ro'] ||
+        attrs.title['ja-ro'] ||
+        attrs.title.ja ||
+        Object.values(attrs.title)[0] as string ||
+        'Untitled'
 }
 
 // Helper: Extract alt titles
