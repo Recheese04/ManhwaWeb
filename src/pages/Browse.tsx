@@ -1,12 +1,13 @@
-import { useState, useMemo } from 'react'
-import { Search, SlidersHorizontal, X, ChevronDown } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { Search, SlidersHorizontal, X, ChevronDown, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import MangaCard from '@/components/MangaCard'
-import { mockManga } from '@/lib/mockData'
+import { searchManga, type ApiManga } from '@/lib/api'
 import { GENRES } from '@/lib/types'
-import type { MangaType, MangaStatus } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 type SortOption = 'popular' | 'latest' | 'rating' | 'newest' | 'az'
@@ -19,27 +20,62 @@ const sortOptions: { label: string; value: SortOption }[] = [
     { label: 'A-Z', value: 'az' },
 ]
 
-const typeOptions: { label: string; value: MangaType | 'all' }[] = [
-    { label: 'All Types', value: 'all' },
+const typeOptions = [
+    { label: 'All Types', value: '' },
     { label: 'Manga', value: 'manga' },
     { label: 'Manhwa', value: 'manhwa' },
     { label: 'Manhua', value: 'manhua' },
 ]
 
-const statusOptions: { label: string; value: MangaStatus | 'all' }[] = [
-    { label: 'All Status', value: 'all' },
+const statusOptions = [
+    { label: 'All Status', value: '' },
     { label: 'Ongoing', value: 'ongoing' },
     { label: 'Completed', value: 'completed' },
     { label: 'Hiatus', value: 'hiatus' },
 ]
 
 export default function Browse() {
-    const [search, setSearch] = useState('')
-    const [sort, setSort] = useState<SortOption>('popular')
-    const [selectedType, setSelectedType] = useState<MangaType | 'all'>('all')
-    const [selectedStatus, setSelectedStatus] = useState<MangaStatus | 'all'>('all')
+    const [searchParams] = useSearchParams()
+    const [search, setSearch] = useState(searchParams.get('q') || '')
+    const [sort, setSort] = useState<SortOption>((searchParams.get('sort') as SortOption) || 'popular')
+    const [selectedType, setSelectedType] = useState(searchParams.get('type') || '')
+    const [selectedStatus, setSelectedStatus] = useState(searchParams.get('status') || '')
     const [selectedGenres, setSelectedGenres] = useState<string[]>([])
     const [filtersOpen, setFiltersOpen] = useState(false)
+    const [results, setResults] = useState<ApiManga[]>([])
+    const [total, setTotal] = useState(0)
+    const [loading, setLoading] = useState(true)
+    const [page, setPage] = useState(0)
+
+    const LIMIT = 20
+
+    // Fetch data when filters change
+    useEffect(() => {
+        let cancelled = false
+        setLoading(true)
+
+        searchManga(search, {
+            type: selectedType || undefined,
+            status: selectedStatus || undefined,
+            limit: LIMIT,
+            offset: page * LIMIT,
+        })
+            .then(res => {
+                if (!cancelled) {
+                    setResults(res.data)
+                    setTotal(res.total)
+                }
+            })
+            .catch(err => {
+                console.error('Search error:', err)
+                if (!cancelled) setResults([])
+            })
+            .finally(() => {
+                if (!cancelled) setLoading(false)
+            })
+
+        return () => { cancelled = true }
+    }, [search, selectedType, selectedStatus, sort, page])
 
     const toggleGenre = (genre: string) => {
         setSelectedGenres(prev =>
@@ -50,39 +86,21 @@ export default function Browse() {
     const clearFilters = () => {
         setSearch('')
         setSort('popular')
-        setSelectedType('all')
-        setSelectedStatus('all')
+        setSelectedType('')
+        setSelectedStatus('')
         setSelectedGenres([])
+        setPage(0)
     }
 
-    const hasFilters = selectedType !== 'all' || selectedStatus !== 'all' || selectedGenres.length > 0
+    const hasFilters = selectedType !== '' || selectedStatus !== '' || selectedGenres.length > 0
 
-    const filteredManga = useMemo(() => {
-        let result = [...mockManga]
+    // Client-side genre filtering (MangaDex uses UUIDs for tags)
+    const filteredResults = useMemo(() => {
+        if (selectedGenres.length === 0) return results
+        return results.filter(m => selectedGenres.some(g => m.genres.map(x => x.toLowerCase()).includes(g.toLowerCase())))
+    }, [results, selectedGenres])
 
-        if (search) {
-            const q = search.toLowerCase()
-            result = result.filter(m =>
-                m.title.toLowerCase().includes(q) ||
-                m.altTitles?.some(t => t.toLowerCase().includes(q)) ||
-                m.author.toLowerCase().includes(q)
-            )
-        }
-
-        if (selectedType !== 'all') result = result.filter(m => m.type === selectedType)
-        if (selectedStatus !== 'all') result = result.filter(m => m.status === selectedStatus)
-        if (selectedGenres.length > 0) result = result.filter(m => selectedGenres.some(g => m.genres.includes(g)))
-
-        switch (sort) {
-            case 'popular': result.sort((a, b) => b.views - a.views); break
-            case 'latest': result.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()); break
-            case 'rating': result.sort((a, b) => b.rating - a.rating); break
-            case 'newest': result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); break
-            case 'az': result.sort((a, b) => a.title.localeCompare(b.title)); break
-        }
-
-        return result
-    }, [search, sort, selectedType, selectedStatus, selectedGenres])
+    const totalPages = Math.ceil(total / LIMIT)
 
     const FilterPanel = () => (
         <div className="space-y-6">
@@ -92,7 +110,7 @@ export default function Browse() {
                     {typeOptions.map(opt => (
                         <button
                             key={opt.value}
-                            onClick={() => setSelectedType(opt.value)}
+                            onClick={() => { setSelectedType(opt.value); setPage(0) }}
                             className={cn(
                                 'px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
                                 selectedType === opt.value
@@ -112,7 +130,7 @@ export default function Browse() {
                     {statusOptions.map(opt => (
                         <button
                             key={opt.value}
-                            onClick={() => setSelectedStatus(opt.value)}
+                            onClick={() => { setSelectedStatus(opt.value); setPage(0) }}
                             className={cn(
                                 'px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
                                 selectedStatus === opt.value
@@ -159,14 +177,21 @@ export default function Browse() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-bold">Browse Library</h1>
-                    <p className="text-sm text-muted-foreground mt-1">{filteredManga.length} titles found</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                        {loading ? 'Searching...' : `${total.toLocaleString()} titles found`}
+                    </p>
                 </div>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 mb-6">
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input placeholder="Search by title, author..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+                    <Input
+                        placeholder="Search by title, author..."
+                        className="pl-9"
+                        value={search}
+                        onChange={e => { setSearch(e.target.value); setPage(0) }}
+                    />
                 </div>
                 <div className="flex gap-2">
                     <div className="relative">
@@ -195,13 +220,13 @@ export default function Browse() {
             {hasFilters && (
                 <div className="flex flex-wrap items-center gap-2 mb-4">
                     <span className="text-xs text-muted-foreground">Active filters:</span>
-                    {selectedType !== 'all' && (
-                        <Badge variant="info" className="text-xs capitalize cursor-pointer" onClick={() => setSelectedType('all')}>
+                    {selectedType && (
+                        <Badge variant="info" className="text-xs capitalize cursor-pointer" onClick={() => setSelectedType('')}>
                             {selectedType} <X className="w-3 h-3 ml-1" />
                         </Badge>
                     )}
-                    {selectedStatus !== 'all' && (
-                        <Badge variant="info" className="text-xs capitalize cursor-pointer" onClick={() => setSelectedStatus('all')}>
+                    {selectedStatus && (
+                        <Badge variant="info" className="text-xs capitalize cursor-pointer" onClick={() => setSelectedStatus('')}>
                             {selectedStatus} <X className="w-3 h-3 ml-1" />
                         </Badge>
                     )}
@@ -239,7 +264,17 @@ export default function Browse() {
                 )}
 
                 <div className="flex-1">
-                    {filteredManga.length === 0 ? (
+                    {loading ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {Array.from({ length: 12 }).map((_, i) => (
+                                <div key={i} className="space-y-2">
+                                    <Skeleton className="aspect-[3/4.5] rounded-xl" />
+                                    <Skeleton className="h-4 w-3/4" />
+                                    <Skeleton className="h-3 w-1/2" />
+                                </div>
+                            ))}
+                        </div>
+                    ) : filteredResults.length === 0 ? (
                         <div className="text-center py-20">
                             <p className="text-xl font-semibold text-muted-foreground mb-2">No titles found</p>
                             <p className="text-sm text-muted-foreground">Try adjusting your filters or search query.</p>
@@ -247,19 +282,19 @@ export default function Browse() {
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                            {filteredManga.map(manga => (
+                            {filteredResults.map(manga => (
                                 <MangaCard key={manga.id} manga={manga} />
                             ))}
                         </div>
                     )}
 
-                    {filteredManga.length > 0 && (
+                    {totalPages > 1 && (
                         <div className="flex items-center justify-center gap-2 mt-10">
-                            <Button variant="outline" size="sm" disabled>Previous</Button>
-                            <Button size="sm" className="min-w-[36px]">1</Button>
-                            <Button variant="outline" size="sm" className="min-w-[36px]">2</Button>
-                            <Button variant="outline" size="sm" className="min-w-[36px]">3</Button>
-                            <Button variant="outline" size="sm">Next</Button>
+                            <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Previous</Button>
+                            <span className="text-sm text-muted-foreground px-3">
+                                Page {page + 1} of {totalPages}
+                            </span>
+                            <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Next</Button>
                         </div>
                     )}
                 </div>

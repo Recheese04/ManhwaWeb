@@ -2,21 +2,43 @@ import { Link } from 'react-router-dom'
 import { Eye, Clock } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import type { Chapter } from '@/lib/types'
-import { formatDate } from '@/lib/mockData'
+
+interface ChapterData {
+    id: string
+    number: number
+    title: string
+    pages: number
+    releasedAt: string
+    isRead?: boolean
+}
 
 interface ChapterItemProps {
-    chapter: Chapter
+    chapter: ChapterData
     mangaSlug: string
     className?: string
 }
 
+function formatDate(dateStr: string): string {
+    const date = new Date(dateStr)
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    if (days === 0) return 'Today'
+    if (days === 1) return 'Yesterday'
+    if (days < 7) return `${days}d ago`
+    if (days < 30) return `${Math.floor(days / 7)}w ago`
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
 export default function ChapterItem({ chapter, mangaSlug, className }: ChapterItemProps) {
+    // mangaSlug here could be "manga-id/chapter/chapter-id" for detail page links
+    const linkTo = mangaSlug.includes('/chapter/') ? `/manga/${mangaSlug}` : `/manga/${mangaSlug}/chapter/${chapter.id}`
+
     return (
         <Link
-            to={`/manga/${mangaSlug}/chapter/${chapter.number}`}
+            to={linkTo}
             className={cn(
-                'flex items-center justify-between gap-4 px-4 py-3 rounded-lg hover:bg-muted transition-colors group',
+                'flex items-center justify-between gap-4 px-4 py-3 hover:bg-muted transition-colors group',
                 chapter.isRead && 'opacity-50',
                 className
             )}
@@ -38,10 +60,12 @@ export default function ChapterItem({ chapter, mangaSlug, className }: ChapterIt
                             <Clock className="w-3 h-3" />
                             {formatDate(chapter.releasedAt)}
                         </span>
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Eye className="w-3 h-3" />
-                            {chapter.pages} pages
-                        </span>
+                        {chapter.pages > 0 && (
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <Eye className="w-3 h-3" />
+                                {chapter.pages} pages
+                            </span>
+                        )}
                     </div>
                 </div>
             </div>
