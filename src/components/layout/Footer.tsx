@@ -78,7 +78,7 @@ export default function Footer() {
                         © 2024 ManhwaWeb. All rights reserved.
                     </p>
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        Made with <Heart className="w-3 h-3 text-red-500 fill-red-500" /> for manga fans
+                        Made with <Heart className="w-3 h-3 text-red-500 fill-red-500" /> Rechie James Postanes, Glenmark Sandigan, and Cydric Sabalboro.
                     </p>
                 </div>
             </div>

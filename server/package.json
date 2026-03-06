@@ -8,11 +8,16 @@
         "start": "node dist/index.js"
     },
     "dependencies": {
+        "@consumet/extensions": "^1.8.8",
+        "cheerio": "^1.2.0",
         "cors": "^2.8.5",
         "dotenv": "^16.4.5",
         "express": "^4.21.0",
         "firebase-admin": "^12.6.0",
-        "node-fetch": "^3.3.2"
+        "node-fetch": "^2.7.0",
+        "playwright": "^1.58.2",
+        "playwright-extra": "^4.3.6",
+        "puppeteer-extra-plugin-stealth": "^2.11.2"
     },
     "devDependencies": {
         "@types/cors": "^2.8.17",
