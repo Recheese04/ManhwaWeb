@@ -55,6 +55,7 @@ export interface ApiManga {
     author: string
     artist: string
     genres: string[]
+    latestChapter?: string | null
     createdAt: string
     updatedAt: string
 }

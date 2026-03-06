@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Star, Eye, BookOpen } from 'lucide-react'
+import { Star, Eye, BookOpen, Clock } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
@@ -14,6 +14,7 @@ interface MangaData {
     views: number
     genres: string[]
     author?: string
+    latestChapter?: string | null
     chapters?: any[]
 }
 
@@ -30,7 +31,16 @@ function formatViews(views: number): string {
     return String(views)
 }
 
+function formatChapter(chapterStr: string | null | undefined): string | null {
+    if (!chapterStr) return null
+    // If it's just a number like "15", return "Ch. 15"
+    if (/^\d+(\.\d+)?$/.test(chapterStr)) return `Ch. ${chapterStr}`
+    return chapterStr
+}
+
 export default function MangaCard({ manga, rank, className, variant = 'default' }: MangaCardProps) {
+    const chapterText = formatChapter(manga.latestChapter)
+
     if (variant === 'wide') {
         return (
             <Link
@@ -52,14 +62,18 @@ export default function MangaCard({ manga, rank, className, variant = 'default' 
                     <p className="text-xs text-muted-foreground mt-1">{manga.author || 'Unknown'}</p>
                     <div className="flex items-center gap-3 mt-2">
                         {manga.rating > 0 && (
-                            <span className="flex items-center gap-1 text-xs text-amber-500">
+                            <span className="flex items-center gap-1 text-[10px] text-amber-500">
                                 <Star className="w-3 h-3 fill-amber-500" />
                                 {manga.rating}
                             </span>
                         )}
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 capitalize">{manga.type}</Badge>
+                        {chapterText && (
+                            <span className="flex items-center gap-1 text-[10px] text-sky-600 dark:text-sky-400 font-medium">
+                                <Clock className="w-3 h-3" />
+                                {chapterText}
+                            </span>
+                        )}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{manga.genres.slice(0, 3).join(' · ')}</p>
                 </div>
             </Link>
         )
@@ -71,12 +85,19 @@ export default function MangaCard({ manga, rank, className, variant = 'default' 
                 to={`/manga/${manga.slug}`}
                 className={cn('group block', className)}
             >
-                <div className="relative aspect-[3/4] rounded-xl overflow-hidden mb-2 shadow-md">
+                <div className="relative aspect-[3/4] rounded-xl overflow-hidden mb-2 shadow-sm border border-border/50">
                     <img
                         src={manga.cover}
                         alt={manga.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
+                    {chapterText && (
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 pt-6">
+                            <span className="text-[10px] font-medium text-white shadow-sm flex items-center gap-1">
+                                <Clock className="w-3 h-3" /> {chapterText}
+                            </span>
+                        </div>
+                    )}
                 </div>
                 <h3 className="font-medium text-sm line-clamp-1 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">{manga.title}</h3>
                 <p className="text-xs text-muted-foreground mt-0.5 capitalize">{manga.type}</p>
@@ -100,40 +121,39 @@ export default function MangaCard({ manga, rank, className, variant = 'default' 
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
 
                 {rank !== undefined && (
-                    <div className="absolute top-2 left-2 w-8 h-8 rounded-lg gradient-primary flex items-center justify-center text-white text-sm font-bold shadow-lg">
+                    <div className="absolute top-2 left-2 w-8 h-8 rounded-lg gradient-primary flex items-center justify-center text-white text-sm font-bold shadow-lg z-10">
                         {rank}
                     </div>
                 )}
 
-                <Badge variant="glass" className="absolute top-2 right-2 text-[10px] capitalize">
+                <Badge variant="glass" className="absolute top-2 right-2 text-[10px] capitalize z-10">
                     {manga.type}
                 </Badge>
 
-                <Badge
-                    variant={manga.status === 'completed' ? 'success' : 'info'}
-                    className="absolute top-10 right-2 text-[10px] capitalize"
-                >
-                    {manga.status}
-                </Badge>
+                {chapterText && (
+                    <Badge variant="default" className="absolute top-10 right-2 text-[10px] bg-sky-500 hover:bg-sky-600 text-white z-10 transition-colors shadow-md border-0">
+                        {chapterText}
+                    </Badge>
+                )}
 
-                <div className="absolute inset-0 bg-sky-900/70 dark:bg-sky-950/70 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
+                <div className="absolute inset-0 bg-sky-900/70 dark:bg-sky-950/70 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center z-20">
                     <div className="flex items-center gap-2 text-white font-medium text-sm gradient-primary px-4 py-2 rounded-lg shadow-lg">
                         <BookOpen className="w-4 h-4" />
                         Read Now
                     </div>
                 </div>
 
-                <div className="absolute bottom-0 left-0 right-0 p-3">
+                <div className="absolute bottom-0 left-0 right-0 p-3 z-10">
                     <h3 className="font-semibold text-sm line-clamp-2 text-white leading-tight">{manga.title}</h3>
-                    <div className="flex items-center gap-2 mt-1.5">
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                         {manga.rating > 0 && (
-                            <span className="flex items-center gap-1 text-xs text-amber-400">
+                            <span className="flex items-center gap-1 text-[10px] text-amber-400">
                                 <Star className="w-3 h-3 fill-amber-400" />
                                 {manga.rating}
                             </span>
                         )}
                         {manga.views > 0 && (
-                            <span className="flex items-center gap-1 text-xs text-white/60">
+                            <span className="flex items-center gap-1 text-[10px] text-white/60">
                                 <Eye className="w-3 h-3" />
                                 {formatViews(manga.views)}
                             </span>

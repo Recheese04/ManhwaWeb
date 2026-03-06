@@ -105,6 +105,7 @@ function transformManga(manga: any) {
         author: getAuthor(manga),
         artist: getArtist(manga),
         genres: tags.slice(0, 8),
+        latestChapter: attrs.latestUploadedChapter || null,
         createdAt: attrs.createdAt || new Date().toISOString(),
         updatedAt: attrs.updatedAt || new Date().toISOString(),
     }
