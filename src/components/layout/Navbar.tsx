@@ -56,13 +56,21 @@ export default function Navbar() {
 
                         {/* Desktop Search + Actions */}
                         <div className="hidden lg:flex items-center gap-2">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <form
+                                className="relative"
+                                onSubmit={(e) => {
+                                    e.preventDefault()
+                                    const q = new FormData(e.currentTarget).get('q') as string
+                                    if (q) window.location.href = `/browse?q=${encodeURIComponent(q)}`
+                                }}
+                            >
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                                 <Input
+                                    name="q"
                                     placeholder="Search titles..."
                                     className="w-64 pl-9"
                                 />
-                            </div>
+                            </form>
 
                             {/* Dark mode toggle */}
                             <Button
@@ -129,14 +137,22 @@ export default function Navbar() {
                     {/* Mobile Search Expand */}
                     {searchOpen && (
                         <div className="lg:hidden pb-3 animate-fade-in">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <form
+                                className="relative"
+                                onSubmit={(e) => {
+                                    e.preventDefault()
+                                    const q = new FormData(e.currentTarget).get('q') as string
+                                    if (q) window.location.href = `/browse?q=${encodeURIComponent(q)}`
+                                }}
+                            >
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                                 <Input
+                                    name="q"
                                     placeholder="Search manga, manhwa, manhua..."
                                     className="w-full pl-9"
                                     autoFocus
                                 />
-                            </div>
+                            </form>
                         </div>
                     )}
                 </div>
