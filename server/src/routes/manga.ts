@@ -28,9 +28,11 @@ async function mangadexFetch(path: string, params?: Record<string, string>) {
 }
 
 // Helper: Extract cover filename from manga relationships
-function getCoverUrl(manga: any): string | null {
+function getCoverUrl(manga: any, reqHost?: string): string | null {
     const coverRel = manga.relationships?.find((r: any) => r.type === 'cover_art')
     if (coverRel?.attributes?.fileName) {
+        // If we have reqHost, make it an absolute URL. Otherwise, rely on frontend prepending it.
+        // Actually, just returning the relative path is safest, and the frontend will attach the API URL.
         return `/api/img-proxy?url=${encodeURIComponent(`https://uploads.mangadex.org/covers/${manga.id}/${coverRel.attributes.fileName}.512.jpg`)}`
     }
     return null

@@ -38,6 +38,19 @@ function formatChapter(chapterStr: string | null | undefined): string | null {
     return chapterStr
 }
 
+function getCoverImageUrl(url: string): string {
+    if (!url) return ''
+    if (url.startsWith('/api')) {
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+        // If VITE_API_URL already ends with /api, we map `/api/img-proxy` correctly
+        // e.g. https://domain.com/api + /api/img-proxy -> https://domain.com/api/img-proxy
+        // wait, VITE_API_URL is "https://manhwaweb.onrender.com/api"
+        // so if url is "/api/img-proxy", we should replace "/api" with VITE_API_URL
+        return url.replace('/api', baseUrl)
+    }
+    return url
+}
+
 export default function MangaCard({ manga, rank, className, variant = 'default' }: MangaCardProps) {
     const chapterText = formatChapter(manga.latestChapter)
 
@@ -52,7 +65,7 @@ export default function MangaCard({ manga, rank, className, variant = 'default' 
             >
                 <div className="relative w-20 h-28 rounded-lg overflow-hidden shrink-0">
                     <img
-                        src={manga.cover}
+                        src={getCoverImageUrl(manga.cover)}
                         alt={manga.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
@@ -87,7 +100,7 @@ export default function MangaCard({ manga, rank, className, variant = 'default' 
             >
                 <div className="relative aspect-[3/4] rounded-xl overflow-hidden mb-2 shadow-sm border border-border/50">
                     <img
-                        src={manga.cover}
+                        src={getCoverImageUrl(manga.cover)}
                         alt={manga.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
@@ -112,7 +125,7 @@ export default function MangaCard({ manga, rank, className, variant = 'default' 
         >
             <div className="relative aspect-[3/4.5] rounded-xl overflow-hidden shadow-md">
                 <img
-                    src={manga.cover}
+                    src={getCoverImageUrl(manga.cover)}
                     alt={manga.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     loading="lazy"
