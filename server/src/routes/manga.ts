@@ -31,7 +31,7 @@ async function mangadexFetch(path: string, params?: Record<string, string>) {
 function getCoverUrl(manga: any): string | null {
     const coverRel = manga.relationships?.find((r: any) => r.type === 'cover_art')
     if (coverRel?.attributes?.fileName) {
-        return `https://uploads.mangadex.org/covers/${manga.id}/${coverRel.attributes.fileName}.512.jpg`
+        return `/api/img-proxy?url=${encodeURIComponent(`https://uploads.mangadex.org/covers/${manga.id}/${coverRel.attributes.fileName}.512.jpg`)}`
     }
     return null
 }

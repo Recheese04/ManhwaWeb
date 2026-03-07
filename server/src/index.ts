@@ -56,7 +56,16 @@ app.get('/api/img-proxy', async (req: express.Request, res: express.Response) =>
                 'Accept': 'image/webp,image/apng,image/*,*/*',
             }
         })
-        if (!imgRes.ok) { res.status(imgRes.status).end(); return }
+
+        // MangaDex returns 404 WITH a placeholder image for licensed/removed covers
+        if (!imgRes.ok) {
+            if (imgRes.status === 404 && url.includes('mangadex.org/covers')) {
+                res.redirect('https://placehold.co/300x400/1a1a2e/38bdf8?text=No+Cover')
+                return
+            }
+            res.status(imgRes.status).end()
+            return
+        }
         res.set('Content-Type', imgRes.headers.get('content-type') || 'image/jpeg')
         res.set('Cache-Control', 'public, max-age=86400') // cache 24h
         const buf = await imgRes.arrayBuffer()
