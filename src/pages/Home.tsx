@@ -78,7 +78,7 @@ export default function Home() {
     return (
         <div className="min-h-screen">
             {/* ============ HERO CAROUSEL ============ */}
-            <section className="relative w-full h-[500px] sm:h-[560px] lg:h-[620px] overflow-hidden">
+            <section className="relative w-full h-[380px] sm:h-[500px] lg:h-[620px] overflow-hidden">
                 {popularLoading || !currentManga ? (
                     <div className="flex items-center justify-center h-full">
                         <Loader2 className="w-8 h-8 animate-spin text-sky-500" />
@@ -109,7 +109,7 @@ export default function Home() {
                             <div className="flex flex-col lg:flex-row items-center lg:items-center gap-8 lg:gap-14 w-full">
                                 {/* Cover Image */}
                                 <div className="relative shrink-0 hidden sm:block">
-                                    <div className="w-52 sm:w-60 lg:w-72 aspect-[3/4.3] rounded-2xl overflow-hidden shadow-2xl shadow-sky-500/20 ring-1 ring-border transition-all duration-500">
+                                    <div className="w-40 sm:w-52 lg:w-72 aspect-[3/4.3] rounded-2xl overflow-hidden shadow-2xl shadow-sky-500/20 ring-1 ring-border transition-all duration-500">
                                         {carouselItems.map((manga, index) => (
                                             <img
                                                 key={manga.id}
@@ -142,7 +142,7 @@ export default function Home() {
 
                                     <h1
                                         key={currentManga.id}
-                                        className="text-3xl sm:text-5xl lg:text-6xl font-extrabold mb-4 leading-[1.1] animate-fade-in"
+                                        className="text-2xl sm:text-4xl lg:text-6xl font-extrabold mb-2 sm:mb-4 leading-[1.1] animate-fade-in line-clamp-2"
                                     >
                                         {currentManga.title}
                                     </h1>
@@ -173,25 +173,25 @@ export default function Home() {
 
                                     <p
                                         key={`syn-${currentManga.id}`}
-                                        className="text-muted-foreground line-clamp-2 sm:line-clamp-3 mb-5 leading-relaxed max-w-xl mx-auto lg:mx-0 text-sm sm:text-base animate-fade-in"
+                                        className="text-muted-foreground line-clamp-2 sm:line-clamp-3 mb-3 sm:mb-5 leading-relaxed max-w-xl mx-auto lg:mx-0 text-xs sm:text-sm lg:text-base animate-fade-in hidden sm:block"
                                     >
                                         {currentManga.synopsis}
                                     </p>
 
-                                    <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 mb-6">
-                                        {currentManga.genres.slice(0, 4).map(genre => (
-                                            <Badge key={genre} variant="secondary" className="text-xs px-3 py-1">{genre}</Badge>
+                                    <div className="flex flex-wrap items-center justify-center lg:justify-start gap-1.5 sm:gap-2 mb-4 sm:mb-6">
+                                        {currentManga.genres.slice(0, 3).map(genre => (
+                                            <Badge key={genre} variant="secondary" className="text-[10px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1">{genre}</Badge>
                                         ))}
                                     </div>
 
-                                    <div className="flex items-center justify-center lg:justify-start gap-3">
+                                    <div className="flex items-center justify-center lg:justify-start gap-2 sm:gap-3">
                                         <Link to={`/manga/${currentManga.slug}`}>
-                                            <Button size="xl" className="gap-2.5 text-lg font-semibold">
-                                                <Play className="w-5 h-5 fill-white" />
+                                            <Button size="lg" className="gap-2 text-sm sm:text-lg font-semibold">
+                                                <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-white" />
                                                 Read Now
                                             </Button>
                                         </Link>
-                                        <Link to={`/manga/${currentManga.slug}`}>
+                                        <Link to={`/manga/${currentManga.slug}`} className="hidden sm:block">
                                             <Button variant="outline" size="lg" className="text-base">
                                                 View Details
                                             </Button>
@@ -251,7 +251,7 @@ export default function Home() {
             </section>
 
             {/* ============ CATEGORY TABS ============ */}
-            <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-6">
+            <section className="max-w-7xl mx-auto px-3 sm:px-6 pt-6 sm:pt-10 pb-4 sm:pb-6">
                 <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-2">
                     {tabs.map(tab => (
                         <button
@@ -271,7 +271,7 @@ export default function Home() {
             </section>
 
             {/* ============ POPULAR TODAY ============ */}
-            <section className="max-w-7xl mx-auto px-4 sm:px-6 pb-14">
+            <section className="max-w-7xl mx-auto px-3 sm:px-6 pb-8 sm:pb-14">
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-lg shadow-sky-500/20">
@@ -283,7 +283,7 @@ export default function Home() {
                         View All <ChevronRight className="w-4 h-4" />
                     </Link>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
+                <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-5">
                     {popularLoading
                         ? Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)
                         : trending.map((manga, i) => (
@@ -293,7 +293,7 @@ export default function Home() {
             </section>
 
             {/* ============ LATEST UPDATES ============ */}
-            <section className="max-w-7xl mx-auto px-4 sm:px-6 pb-14">
+            <section className="max-w-7xl mx-auto px-3 sm:px-6 pb-8 sm:pb-14">
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-emerald-500/15 dark:bg-emerald-500/20 flex items-center justify-center">
@@ -305,7 +305,7 @@ export default function Home() {
                         View All <ChevronRight className="w-4 h-4" />
                     </Link>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
                     {latestLoading
                         ? Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-36 rounded-xl" />)
                         : latestUpdates.map(manga => (
@@ -315,7 +315,7 @@ export default function Home() {
             </section>
 
             {/* ============ DISCOVER BY GENRE ============ */}
-            <section className="max-w-7xl mx-auto px-4 sm:px-6 pb-14">
+            <section className="max-w-7xl mx-auto px-3 sm:px-6 pb-8 sm:pb-14">
                 <div className="flex items-center gap-3 mb-6">
                     <div className="w-10 h-10 rounded-xl bg-amber-500/15 dark:bg-amber-500/20 flex items-center justify-center">
                         <Sparkles className="w-5 h-5 text-amber-500" />
@@ -337,7 +337,7 @@ export default function Home() {
             </section>
 
             {/* ============ RECOMMENDED FOR YOU ============ */}
-            <section className="max-w-7xl mx-auto px-4 sm:px-6 pb-16">
+            <section className="max-w-7xl mx-auto px-3 sm:px-6 pb-10 sm:pb-16">
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-rose-500/15 dark:bg-rose-500/20 flex items-center justify-center">
@@ -349,7 +349,7 @@ export default function Home() {
                         Browse All <ArrowRight className="w-4 h-4" />
                     </Link>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-5">
                     {popularLoading
                         ? Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)
                         : recommended.map(manga => (

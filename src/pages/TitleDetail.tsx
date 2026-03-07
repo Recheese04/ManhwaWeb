@@ -81,16 +81,16 @@ export default function TitleDetail() {
     return (
         <div className="min-h-screen">
             {/* Banner */}
-            <div className="relative h-64 sm:h-80 lg:h-96 overflow-hidden">
+            <div className="relative h-48 sm:h-64 lg:h-96 overflow-hidden">
                 <img src={manga.cover} alt="" className="w-full h-full object-cover opacity-40 dark:opacity-30 blur-xl scale-110" />
                 <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/70 to-background" />
             </div>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 -mt-40 sm:-mt-48 relative z-10 pb-16">
+            <div className="max-w-7xl mx-auto px-3 sm:px-6 -mt-28 sm:-mt-40 lg:-mt-48 relative z-10 pb-10 sm:pb-16">
                 <div className="flex flex-col lg:flex-row gap-8">
                     {/* Cover + Actions */}
                     <div className="flex flex-col items-center lg:items-start shrink-0">
-                        <div className="w-48 sm:w-56 aspect-[3/4.5] rounded-2xl overflow-hidden shadow-2xl shadow-sky-500/10 ring-1 ring-border mb-6">
+                        <div className="w-36 sm:w-48 lg:w-56 aspect-[3/4.5] rounded-2xl overflow-hidden shadow-2xl shadow-sky-500/10 ring-1 ring-border mb-4 sm:mb-6">
                             <img src={manga.cover} alt={manga.title} className="w-full h-full object-cover" />
                         </div>
                         <div className="flex flex-col gap-2 w-full max-w-[224px]">
@@ -123,7 +123,7 @@ export default function TitleDetail() {
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                         <Badge variant="info" className="mb-3 capitalize">{manga.type}</Badge>
-                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">{manga.title}</h1>
+                        <h1 className="text-xl sm:text-2xl lg:text-4xl font-bold mb-2">{manga.title}</h1>
                         {manga.altTitles && manga.altTitles.length > 0 && (
                             <p className="text-sm text-muted-foreground mb-4">{manga.altTitles.join(' • ')}</p>
                         )}
@@ -203,7 +203,7 @@ export default function TitleDetail() {
                 {related.length > 0 && (
                     <section className="mt-12">
                         <h2 className="text-xl font-bold mb-6">You May Also Like</h2>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
                             {related.map(m => <MangaCard key={m.id} manga={m} />)}
                         </div>
                     </section>

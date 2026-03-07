@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { BookOpen, Github, Twitter, Mail, Heart } from 'lucide-react'
+import { Github, Twitter, Mail, Heart } from 'lucide-react'
 
 const footerLinks = {
     Browse: [
@@ -26,15 +26,15 @@ const footerLinks = {
 export default function Footer() {
     return (
         <footer className="border-t border-border bg-card/50">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
                     {/* Brand */}
-                    <div className="col-span-2 md:col-span-1">
+                    <div className="col-span-2 sm:col-span-2 md:col-span-1">
                         <Link to="/" className="flex items-center gap-2 mb-4">
-                            <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-                                <BookOpen className="w-5 h-5 text-white" />
+                            <div className="w-8 h-8 rounded-lg overflow-hidden shadow-md">
+                                <img src="/manhwaweb-logo.png" alt="ReCyGlen" className="w-full h-full object-cover" />
                             </div>
-                            <span className="text-lg font-bold text-gradient">ManhwaWeb</span>
+                            <span className="text-lg font-bold text-gradient">ReCyGlen</span>
                         </Link>
                         <p className="text-sm text-muted-foreground mb-4 max-w-xs">
                             Your premium destination for reading manga, manhwa, and manhua online. Discover thousands of titles.
@@ -73,11 +73,11 @@ export default function Footer() {
                 </div>
 
                 {/* Bottom */}
-                <div className="mt-10 pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <p className="text-xs text-muted-foreground">
-                        © 2024 ManhwaWeb. All rights reserved.
+                <div className="mt-8 sm:mt-10 pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+                    <p className="text-xs text-muted-foreground text-center sm:text-left">
+                        © {new Date().getFullYear()} ReCyGlen. All rights reserved.
                     </p>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <p className="text-xs text-muted-foreground flex items-center gap-1 text-center sm:text-right">
                         Made with <Heart className="w-3 h-3 text-red-500 fill-red-500" /> Rechie James Postanes, Glenmark Sandigan, and Cydric Sabalboro.
                     </p>
                 </div>

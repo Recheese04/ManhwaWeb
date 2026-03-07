@@ -151,7 +151,7 @@ export default function Reader() {
             {/* Settings Panel */}
             {showSettings && (
                 <div className={cn(
-                    'fixed top-16 right-4 z-40 w-64 rounded-xl p-4 shadow-2xl animate-fade-in-fast border',
+                    'fixed top-16 right-2 sm:right-4 z-40 w-[calc(100%-16px)] sm:w-64 rounded-xl p-4 shadow-2xl animate-fade-in-fast border',
                     isLight ? 'bg-white border-gray-200' : 'bg-gray-900 border-white/10'
                 )}>
                     <h3 className={cn('text-sm font-semibold mb-4', isLight ? 'text-black' : 'text-white')}>Settings</h3>
@@ -193,7 +193,7 @@ export default function Reader() {
             {/* Chapter List Panel */}
             {showChapterList && (
                 <div className={cn(
-                    'fixed top-16 left-4 z-40 w-72 max-h-[60vh] rounded-xl shadow-2xl overflow-y-auto animate-fade-in-fast border',
+                    'fixed top-16 left-2 sm:left-4 z-40 w-[calc(100%-16px)] sm:w-72 max-h-[60vh] rounded-xl shadow-2xl overflow-y-auto animate-fade-in-fast border',
                     isLight ? 'bg-white border-gray-200' : 'bg-gray-900 border-white/10'
                 )}>
                     <div className={cn('p-3 border-b sticky top-0 backdrop-blur-xl', isLight ? 'bg-white/90 border-gray-200' : 'bg-gray-900/90 border-white/10')}>

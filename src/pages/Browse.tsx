@@ -175,7 +175,7 @@ export default function Browse() {
 
     return (
         <div
-            className="min-h-screen max-w-7xl mx-auto px-4 sm:px-6 py-8"
+            className="min-h-screen max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8"
             onFocus={() => setSearchFocused(true)}
             onBlur={(e) => {
                 // If the new focus target is outside this container, hide filters
@@ -186,7 +186,7 @@ export default function Browse() {
         >
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                 <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold">Browse Library</h1>
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Browse Library</h1>
                     <p className="text-sm text-muted-foreground mt-1">
                         {loading ? 'Searching...' : `${total.toLocaleString()} titles found`}
                     </p>
@@ -286,7 +286,7 @@ export default function Browse() {
 
                 <div className="flex-1">
                     {loading ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                             {Array.from({ length: 12 }).map((_, i) => (
                                 <div key={i} className="space-y-2">
                                     <Skeleton className="aspect-[3/4.5] rounded-xl" />
@@ -302,7 +302,7 @@ export default function Browse() {
                             <Button variant="outline" className="mt-4" onClick={clearFilters}>Clear Filters</Button>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                             {filteredResults.map(manga => (
                                 <MangaCard key={manga.id} manga={manga} />
                             ))}

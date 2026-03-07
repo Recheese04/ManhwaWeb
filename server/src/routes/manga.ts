@@ -305,8 +305,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 
 /**
  * GET /api/manga/:id/chapters
- * Fetches all English chapters. Falls back to MangaKakalot if MangaDex has < 10 English chapters
- * (e.g. licensed titles like Solo Leveling where MangaDex removed scans).
+ * Fetches all English chapters by merging WeebCentral and MangaDex to ensure no missing chapters
  */
 router.get('/:id/chapters', async (req: Request, res: Response) => {
     try {
@@ -315,141 +314,185 @@ router.get('/:id/chapters', async (req: Request, res: Response) => {
 
         const BATCH_SIZE = 500
 
-        // --- Step 1: Fetch English chapters from MangaDex ---
-        async function fetchMangaDexChapters(): Promise<any[]> {
-            let allRaw: any[] = []
-            let offset = 0
-            let total = Infinity
-
-            while (offset < total) {
-                const url = new URL(`${MANGADEX_API}/manga/${id}/feed`)
-                url.searchParams.append('limit', String(BATCH_SIZE))
-                url.searchParams.append('offset', String(offset))
-                url.searchParams.append('translatedLanguage[]', 'en')
-                url.searchParams.append('order[chapter]', String(order))
-                url.searchParams.append('includeEmptyPages', '0')
-
-                const response = await fetch(url.toString())
-                const data = await response.json()
-
-                if (!data.data || data.data.length === 0) break
-
-                total = data.total ?? 0
-                allRaw = allRaw.concat(data.data)
-                offset += data.data.length
-
-                if (data.data.length < BATCH_SIZE) break
-            }
-            return allRaw
-        }
-
-        const rawMDX = await fetchMangaDexChapters()
-        const mdxChapters = rawMDX.map((ch: any) => ({
-            id: ch.id,
-            number: parseFloat(ch.attributes.chapter || '0'),
-            title: ch.attributes.title || `Chapter ${ch.attributes.chapter || '?'}`,
-            pages: ch.attributes.pages || 0,
-            releasedAt: ch.attributes.publishAt || ch.attributes.createdAt || new Date().toISOString(),
-            isRead: false,
-            source: 'mangadex',
-        }))
-
-        // Deduplicate by chapter number
+        // Helper to deduplicate chapters by number (keeps the first occurrence)
         const dedup = (list: any[]) => {
             const seen = new Set<number>()
             return list.filter((ch: any) => {
+                // Keep the chapter if it's the first time we've seen this number
                 if (seen.has(ch.number)) return false
                 seen.add(ch.number)
                 return true
             })
         }
 
-        // --- Step 2: If MangaDex has enough chapters, return them ---
-        if (mdxChapters.length >= 10) {
-            const unique = dedup(mdxChapters)
-            res.json({ data: unique, total: unique.length })
-            return
-        }
+        // Function to fetch from WeebCentral
+        async function fetchWeebCentralChapters(): Promise<any[]> {
+            console.log(`[Chapters] Fetching from WeebCentral for ${id}...`)
+            try {
+                // Get manga title from MangaDex
+                const detailData = await (await fetch(new URL(`${MANGADEX_API}/manga/${id}`).toString())).json()
+                const attrs = detailData.data?.attributes
+                const title: string =
+                    attrs?.altTitles?.find((t: any) => t.en)?.en ||
+                    attrs?.title?.en ||
+                    attrs?.title?.['en-ro'] ||
+                    Object.values(attrs?.title || {})[0] as string ||
+                    ''
 
-        // --- Step 3: Fallback — MangaPill (consumet provider, works for licensed titles) ---
-        console.log(`[Chapters] MangaDex has only ${mdxChapters.length} EN chapters for ${id}, trying MangaPill...`)
+                if (!title) throw new Error('Could not determine manga title for WeebCentral search')
 
-        try {
-            // Get manga title from MangaDex
-            const detailData = await (await fetch(new URL(`${MANGADEX_API}/manga/${id}`).toString())).json()
-            const attrs = detailData.data?.attributes
-            const title: string =
-                attrs?.altTitles?.find((t: any) => t.en)?.en ||
-                attrs?.title?.en ||
-                attrs?.title?.['en-ro'] ||
-                Object.values(attrs?.title || {})[0] as string ||
-                ''
-
-            if (!title) throw new Error('Could not determine manga title')
-
-            // Helper: check if two titles share enough words (>= 50% overlap)
-            const titleMatch = (a: string, b: string): boolean => {
-                const wa = new Set(a.toLowerCase().split(/\s+/).filter(w => w.length > 2))
-                const wb = new Set(b.toLowerCase().split(/\s+/).filter(w => w.length > 2))
-                if (wa.size === 0) return false
-                let shared = 0
-                wa.forEach(w => { if (wb.has(w)) shared++ })
-                return (shared / wa.size) >= 0.5
-            }
-
-            // Try multiple search terms to find the right manga
-            const searchTerms = [title]
-            // Also try alt English titles from MangaDex
-            if (attrs?.altTitles) {
-                const enAlts = attrs.altTitles.filter((t: any) => t.en || t['en-us']).map((t: any) => t.en || t['en-us']).filter(Boolean)
-                searchTerms.push(...enAlts.slice(0, 2))
-            }
-
-            let best: any = null
-            for (const term of searchTerms) {
-                const searchResults = await weebCentral.search(term)
-                const candidates = (searchResults?.results || []).filter((r: any) => {
-                    const t = (r.title as string || '').toLowerCase()
-                    return !t.includes('novel') && !t.includes('light novel') && !t.includes('web novel')
-                })
-                // Find a result whose title matches our search term
-                const match = candidates.find((r: any) => titleMatch(term, r.title as string))
-                if (match) { best = match; break }
-            }
-
-            if (!best) throw new Error(`No matching manga found on WeebCentral for: ${title}`)
-            console.log(`[WeebCentral] Matched: "${best.title}" (id: ${best.id}) for "${title}"`)
-
-            // Fetch all chapters
-            const info = await weebCentral.fetchMangaInfo(best.id as string)
-            const rawChapters: any[] = info.chapters || []
-            if (!rawChapters.length) throw new Error(`No chapters on WeebCentral for: ${title}`)
-
-            // WeebCentral returns newest-first; reverse for ascending
-            const ordered = order === 'asc' ? [...rawChapters].reverse() : rawChapters
-
-            const wbcChapters = ordered.map((ch: any, i: number) => {
-                // WeebCentral has no chapter number field — extract from title e.g. "Chapter 200"
-                const titleStr: string = ch.title || ''
-                const numMatch = titleStr.match(/chapter\s+([\d.]+)/i)
-                const num = numMatch ? parseFloat(numMatch[1]) : (ordered.length - i)
-                return {
-                    id: `wbc:${ch.id}`,
-                    number: num,
-                    title: titleStr || `Chapter ${num}`,
-                    pages: 0,
-                    releasedAt: ch.releaseDate || new Date().toISOString(),
-                    isRead: false,
+                // Helper: check if two titles share enough words (>= 50% overlap)
+                const sanitize = (s: string) => s.toLowerCase().replace(/[^a-z0-9\s]/g, ' ')
+                const titleMatch = (a: string, b: string): boolean => {
+                    const wa = new Set(sanitize(a).split(/\s+/).filter(w => w.length > 2))
+                    const wb = new Set(sanitize(b).split(/\s+/).filter(w => w.length > 2))
+                    if (wa.size === 0) return false
+                    let shared = 0
+                    wa.forEach(w => { if (wb.has(w)) shared++ })
+                    return (shared / wa.size) >= 0.5
                 }
-            })
 
-            const unique = dedup(wbcChapters)
-            res.json({ data: unique, total: unique.length })
-        } catch (fallbackErr: any) {
-            console.error('[Chapters] WeebCentral fallback failed:', fallbackErr?.message || fallbackErr)
-            const unique = dedup(mdxChapters)
-            res.json({ data: unique, total: unique.length })
+                // Try multiple search terms to find the right manga
+                const searchTerms = new Set<string>()
+                if (title) searchTerms.add(title)
+
+                // Add Romaji which WeebCentral often uses for titles like 'Sono Bisque Doll'
+                if (attrs?.title?.['ja-ro']) searchTerms.add(attrs.title['ja-ro'])
+
+                // Add alt English and Romaji titles
+                if (attrs?.altTitles) {
+                    attrs.altTitles.forEach((t: any) => {
+                        if (t.en) searchTerms.add(t.en)
+                        if (t['en-us']) searchTerms.add(t['en-us'])
+                        if (t['ja-ro']) searchTerms.add(t['ja-ro'])
+                    })
+                }
+
+                // If title has punctuation (colon, hyphen), search just the first part (e.g. "Frieren: Beyond..." -> "Frieren")
+                const splitTitle = title.split(/[:\-]/)[0].trim()
+                if (splitTitle && splitTitle.length > 2) searchTerms.add(splitTitle)
+
+                // If title is long, try just the first 3 words
+                const words = title.split(/\s+/)
+                if (words.length > 3) {
+                    searchTerms.add(words.slice(0, 3).join(' '))
+                }
+
+                let best: any = null
+                for (const term of Array.from(searchTerms)) {
+                    if (!term || term.length < 3) continue
+                    const searchResults = await weebCentral.search(term)
+                    const candidates = (searchResults?.results || []).filter((r: any) => {
+                        const t = (r.title as string || '').toLowerCase()
+                        return !t.includes('novel') && !t.includes('light novel') && !t.includes('web novel')
+                    })
+                    // Find a result whose title matches our search term
+                    const match = candidates.find((r: any) => titleMatch(title, r.title as string) || titleMatch(term, r.title as string))
+                    if (match) { best = match; break }
+                }
+
+                if (!best) {
+                    console.log(`[WeebCentral] No matching manga found for: ${title}`)
+                    return []
+                }
+
+                console.log(`[WeebCentral] Matched: "${best.title}" (id: ${best.id}) for "${title}"`)
+
+                // Fetch all chapters
+                const info = await weebCentral.fetchMangaInfo(best.id as string)
+                const rawChapters: any[] = info.chapters || []
+
+                if (!rawChapters.length) return []
+
+                return rawChapters.map((ch: any, i: number) => {
+                    // WeebCentral has no chapter number field — extract from title e.g. "Chapter 200"
+                    const titleStr: string = ch.title || ''
+                    const numMatch = titleStr.match(/chapter\s+([\d.]+)/i)
+                    // Weebcentral is newest first by default
+                    const num = numMatch ? parseFloat(numMatch[1]) : (rawChapters.length - i)
+                    return {
+                        id: `wbc:${ch.id}`,
+                        number: num,
+                        title: titleStr || `Chapter ${num}`,
+                        pages: 0,
+                        releasedAt: ch.releaseDate || new Date().toISOString(),
+                        isRead: false,
+                        source: 'weebcentral'
+                    }
+                })
+            } catch (wbcErr: any) {
+                console.warn(`[Chapters] WeebCentral fetch failed: ${wbcErr?.message}`)
+                return []
+            }
         }
+
+        // Function to fetch from MangaDex
+        async function fetchMangaDexChapters(): Promise<any[]> {
+            console.log(`[Chapters] Fetching from MangaDex for ${id}...`)
+            try {
+                let allRaw: any[] = []
+                let offset = 0
+                let total = Infinity
+
+                while (offset < total) {
+                    const url = new URL(`${MANGADEX_API}/manga/${id}/feed`)
+                    url.searchParams.append('limit', String(BATCH_SIZE))
+                    url.searchParams.append('offset', String(offset))
+                    url.searchParams.append('translatedLanguage[]', 'en')
+                    // Order doesn't matter since we sort manually, but asc is better for paginating
+                    url.searchParams.append('order[chapter]', 'asc')
+                    url.searchParams.append('includeEmptyPages', '0')
+
+                    const response = await fetch(url.toString())
+                    const data = await response.json()
+
+                    if (!data.data || data.data.length === 0) break
+
+                    total = data.total ?? 0
+                    allRaw = allRaw.concat(data.data)
+                    offset += data.data.length
+
+                    if (data.data.length < BATCH_SIZE) break
+                }
+
+                return allRaw.map((ch: any) => ({
+                    id: ch.id,
+                    number: parseFloat(ch.attributes.chapter || '0'),
+                    title: ch.attributes.title || `Chapter ${ch.attributes.chapter || '?'}`,
+                    pages: ch.attributes.pages || 0,
+                    releasedAt: ch.attributes.publishAt || ch.attributes.createdAt || new Date().toISOString(),
+                    isRead: false,
+                    source: 'mangadex',
+                }))
+            } catch (err: any) {
+                console.warn(`[Chapters] MangaDex fetch failed: ${err?.message}`)
+                return []
+            }
+        }
+
+        // --- Execute both fetches in Parallel ---
+        console.time(`[Chapters] Fetched sources in parallel for ${id}`)
+
+        const [wbcChapters, mdxChapters] = await Promise.all([
+            fetchWeebCentralChapters(),
+            fetchMangaDexChapters()
+        ])
+
+        console.timeEnd(`[Chapters] Fetched sources in parallel for ${id}`)
+        console.log(`[Chapters] WeebCentral chapters: ${wbcChapters.length}, MangaDex chapters: ${mdxChapters.length}`)
+
+        // --- Merge and Deduplicate ---
+        // Combine them putting WeebCentral chapters FIRST, so dedup() keeps them over MangaDex if numbers are equal
+        const combined = [...wbcChapters, ...mdxChapters]
+        const unique = dedup(combined)
+
+        // Sort according to requested order
+        unique.sort((a, b) => {
+            if (order === 'asc') return a.number - b.number
+            return b.number - a.number
+        })
+
+        res.json({ data: unique, total: unique.length })
     } catch (error) {
         console.error('Chapters error:', error)
         res.status(500).json({ error: 'Failed to get chapters' })
