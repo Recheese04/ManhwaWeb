@@ -38,16 +38,6 @@ function formatChapter(chapterStr: string | null | undefined): string | null {
     return chapterStr
 }
 
-function getCoverImageUrl(url: string): string {
-    if (!url) return ''
-    if (url.startsWith('/api')) {
-        // Force the render URL if environment variables are missing on Vercel
-        const baseUrl = import.meta.env.VITE_API_URL || 'https://manhwaweb.onrender.com/api'
-        return url.replace('/api', baseUrl)
-    }
-    return url
-}
-
 export default function MangaCard({ manga, rank, className, variant = 'default' }: MangaCardProps) {
     const chapterText = formatChapter(manga.latestChapter)
 
@@ -62,7 +52,7 @@ export default function MangaCard({ manga, rank, className, variant = 'default' 
             >
                 <div className="relative w-20 h-28 rounded-lg overflow-hidden shrink-0">
                     <img
-                        src={getCoverImageUrl(manga.cover)}
+                        src={manga.cover}
                         alt={manga.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
@@ -97,7 +87,7 @@ export default function MangaCard({ manga, rank, className, variant = 'default' 
             >
                 <div className="relative aspect-[3/4] rounded-xl overflow-hidden mb-2 shadow-sm border border-border/50">
                     <img
-                        src={getCoverImageUrl(manga.cover)}
+                        src={manga.cover}
                         alt={manga.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
@@ -122,7 +112,7 @@ export default function MangaCard({ manga, rank, className, variant = 'default' 
         >
             <div className="relative aspect-[3/4.5] rounded-xl overflow-hidden shadow-md">
                 <img
-                    src={getCoverImageUrl(manga.cover)}
+                    src={manga.cover}
                     alt={manga.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     loading="lazy"

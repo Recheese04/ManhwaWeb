@@ -10,15 +10,6 @@ import { useMangaDetails, useMangaChapters, usePopularManga } from '@/lib/hooks'
 import { useAuth } from '@/lib/AuthContext'
 import { addBookmark, removeBookmark } from '@/lib/api'
 
-function getCoverImageUrl(url: string): string {
-    if (!url) return ''
-    if (url.startsWith('/api')) {
-        const baseUrl = import.meta.env.VITE_API_URL || 'https://manhwaweb.onrender.com/api'
-        return url.replace('/api', baseUrl)
-    }
-    return url
-}
-
 export default function TitleDetail() {
     const { slug } = useParams<{ slug: string }>()
     const { data: manga, loading, error } = useMangaDetails(slug)
@@ -91,7 +82,7 @@ export default function TitleDetail() {
         <div className="min-h-screen">
             {/* Banner */}
             <div className="relative h-64 sm:h-80 lg:h-96 overflow-hidden">
-                <img src={getCoverImageUrl(manga.cover)} alt="" className="w-full h-full object-cover opacity-40 dark:opacity-30 blur-xl scale-110" />
+                <img src={manga.cover} alt="" className="w-full h-full object-cover opacity-40 dark:opacity-30 blur-xl scale-110" />
                 <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/70 to-background" />
             </div>
 
@@ -100,7 +91,7 @@ export default function TitleDetail() {
                     {/* Cover + Actions */}
                     <div className="flex flex-col items-center lg:items-start shrink-0">
                         <div className="w-48 sm:w-56 aspect-[3/4.5] rounded-2xl overflow-hidden shadow-2xl shadow-sky-500/10 ring-1 ring-border mb-6">
-                            <img src={getCoverImageUrl(manga.cover)} alt={manga.title} className="w-full h-full object-cover" />
+                            <img src={manga.cover} alt={manga.title} className="w-full h-full object-cover" />
                         </div>
                         <div className="flex flex-col gap-2 w-full max-w-[224px]">
                             {firstChapterId ? (
