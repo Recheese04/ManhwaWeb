@@ -1,6 +1,7 @@
 import { firebaseAuth } from './firebase'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'https://manhwaweb.onrender.com/api'
+// Using a relative path allows vite.config.ts (local) and vercel.json (prod) to handle the proxying seamlessly
+const API_BASE = '/api'
 
 interface ApiOptions {
     auth?: boolean
