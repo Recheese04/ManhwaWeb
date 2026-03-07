@@ -41,11 +41,8 @@ function formatChapter(chapterStr: string | null | undefined): string | null {
 function getCoverImageUrl(url: string): string {
     if (!url) return ''
     if (url.startsWith('/api')) {
-        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
-        // If VITE_API_URL already ends with /api, we map `/api/img-proxy` correctly
-        // e.g. https://domain.com/api + /api/img-proxy -> https://domain.com/api/img-proxy
-        // wait, VITE_API_URL is "https://manhwaweb.onrender.com/api"
-        // so if url is "/api/img-proxy", we should replace "/api" with VITE_API_URL
+        // Force the render URL if environment variables are missing on Vercel
+        const baseUrl = import.meta.env.VITE_API_URL || 'https://manhwaweb.onrender.com/api'
         return url.replace('/api', baseUrl)
     }
     return url

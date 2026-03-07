@@ -13,7 +13,7 @@ import { addBookmark, removeBookmark } from '@/lib/api'
 function getCoverImageUrl(url: string): string {
     if (!url) return ''
     if (url.startsWith('/api')) {
-        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+        const baseUrl = import.meta.env.VITE_API_URL || 'https://manhwaweb.onrender.com/api'
         return url.replace('/api', baseUrl)
     }
     return url
