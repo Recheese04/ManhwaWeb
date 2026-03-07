@@ -82,11 +82,11 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 })
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT as number, '0.0.0.0', () => {
     console.log(`
 ╔══════════════════════════════════════════╗
 ║     ManhwaWeb API Server                 ║
-║     Running on http://localhost:${PORT}      ║
+║     Running on http://0.0.0.0:${PORT}        ║
 ╚══════════════════════════════════════════╝
   `)
     console.log('Routes:')
