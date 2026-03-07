@@ -49,9 +49,14 @@ app.get('/api/img-proxy', async (req: express.Request, res: express.Response) =>
     const { url, ref } = req.query as { url?: string; ref?: string }
     if (!url) { res.status(400).json({ error: 'Missing url param' }); return }
     try {
+        let referer = ref || 'https://mangapill.com/'
+        if (!ref && url.includes('mangadex.org')) {
+            referer = 'https://mangadex.org/'
+        }
+
         const imgRes = await fetch(url, {
             headers: {
-                'Referer': ref || 'https://mangapill.com/',
+                'Referer': referer,
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
                 'Accept': 'image/webp,image/apng,image/*,*/*',
             }
