@@ -96,7 +96,7 @@ export default function Reader() {
     const isLight = readerTheme === 'light'
 
     const goToChapter = (id: string) => {
-        navigate(`/manga/${slug}/chapter/${id}`)
+        navigate(`/manga/${slug}/chapter/${encodeURIComponent(id)}`)
         if (contentRef.current) contentRef.current.scrollTop = 0
     }
 
@@ -260,12 +260,12 @@ export default function Reader() {
                             </p>
                             <div className="flex items-center justify-center gap-3">
                                 {hasPrev && (
-                                    <Button variant="outline" onClick={() => goToChapter(chapters[currentChapterIndex - 1].id)}>
+                                    <Button variant="outline" onClick={() => goToChapter(chapters[currentChapterIndex - 1]?.id ?? '')}>
                                         <ChevronLeft className="w-4 h-4" /> Previous
                                     </Button>
                                 )}
                                 {hasNext && (
-                                    <Button onClick={() => goToChapter(chapters[currentChapterIndex + 1].id)}>
+                                    <Button onClick={() => goToChapter(chapters[currentChapterIndex + 1]?.id ?? '')}>
                                         Next Chapter <ChevronRight className="w-4 h-4" />
                                     </Button>
                                 )}
@@ -285,7 +285,7 @@ export default function Reader() {
                     isLight ? 'bg-white/90 border-t border-gray-200' : 'bg-gray-950/90 border-t border-white/10'
                 )}>
                     <Button variant="ghost" size="sm" disabled={!hasPrev}
-                        onClick={() => hasPrev && goToChapter(chapters[currentChapterIndex - 1].id)}
+                        onClick={() => hasPrev && goToChapter(chapters[currentChapterIndex - 1]?.id ?? '')}
                         className={isLight ? 'text-gray-600' : 'text-white/70'}>
                         <ChevronLeft className="w-4 h-4" /> Prev
                     </Button>
@@ -293,7 +293,7 @@ export default function Reader() {
                         Ch. {currentChapter?.number || '?'} · {pages.length} pages
                     </span>
                     <Button variant="ghost" size="sm" disabled={!hasNext}
-                        onClick={() => hasNext && goToChapter(chapters[currentChapterIndex + 1].id)}
+                        onClick={() => hasNext && goToChapter(chapters[currentChapterIndex + 1]?.id ?? '')}
                         className={isLight ? 'text-gray-600' : 'text-white/70'}>
                         Next <ChevronRight className="w-4 h-4" />
                     </Button>

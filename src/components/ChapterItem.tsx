@@ -32,7 +32,8 @@ function formatDate(dateStr: string): string {
 
 export default function ChapterItem({ chapter, mangaSlug, className }: ChapterItemProps) {
     // mangaSlug here could be "manga-id/chapter/chapter-id" for detail page links
-    const linkTo = mangaSlug.includes('/chapter/') ? `/manga/${mangaSlug}` : `/manga/${mangaSlug}/chapter/${chapter.id}`
+    const encodedId = encodeURIComponent(chapter.id)
+    const linkTo = mangaSlug.includes('/chapter/') ? `/manga/${mangaSlug}` : `/manga/${mangaSlug}/chapter/${encodedId}`
 
     return (
         <Link

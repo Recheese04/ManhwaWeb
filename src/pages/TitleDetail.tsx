@@ -95,7 +95,7 @@ export default function TitleDetail() {
                         </div>
                         <div className="flex flex-col gap-2 w-full max-w-[224px]">
                             {firstChapterId ? (
-                                <Link to={`/manga/${manga.slug}/chapter/${firstChapterId}`} className="w-full">
+                                <Link to={`/manga/${manga.slug}/chapter/${encodeURIComponent(firstChapterId)}`} className="w-full">
                                     <Button className="w-full" size="lg">
                                         <BookOpen className="w-5 h-5" /> Start Reading
                                     </Button>

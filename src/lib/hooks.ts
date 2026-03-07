@@ -111,7 +111,7 @@ export function useMangaChapters(id: string | undefined, options?: { order?: 'as
         if (!id) return
         let cancelled = false
         setLoading(true)
-        getMangaChapters(id, { limit: 100, order: options?.order || 'desc' })
+        getMangaChapters(id, { order: options?.order || 'desc' })
             .then(res => { if (!cancelled) { setData(res.data); setTotal(res.total) } })
             .catch(err => { if (!cancelled) setError(err.message) })
             .finally(() => { if (!cancelled) setLoading(false) })

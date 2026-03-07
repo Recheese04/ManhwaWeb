@@ -144,10 +144,10 @@ export default function Navbar() {
                     <div className="flex items-center justify-between h-16">
                         {/* Logo */}
                         <Link to="/" className="flex items-center gap-2.5 shrink-0">
-                            <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-lg shadow-sky-500/20">
-                                <BookOpen className="w-5 h-5 text-white" />
+                            <div className="w-9 h-9 rounded-xl overflow-hidden shadow-lg shadow-sky-500/20">
+                                <img src="/recyglen-logo.png" alt="ReCyGlen" className="w-full h-full object-cover" />
                             </div>
-                            <span className="text-xl font-bold text-gradient hidden sm:inline">ManhwaWeb</span>
+                            <span className="text-xl font-bold text-gradient hidden sm:inline">ReCyGlen</span>
                         </Link>
 
                         {/* Desktop Nav */}

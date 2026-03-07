@@ -1,7 +1,9 @@
 import { Router, Request, Response } from 'express'
+import { MANGA } from '@consumet/extensions'
 
 const router = Router()
 const MANGADEX_API = 'https://api.mangadex.org'
+const weebCentral = new MANGA.WeebCentral()
 
 // Helper to proxy requests to MangaDex
 async function mangadexFetch(path: string, params?: Record<string, string>) {
@@ -301,44 +303,151 @@ router.get('/:id', async (req: Request, res: Response) => {
 
 /**
  * GET /api/manga/:id/chapters
- * Get chapters for a manga
+ * Fetches all English chapters. Falls back to MangaKakalot if MangaDex has < 10 English chapters
+ * (e.g. licensed titles like Solo Leveling where MangaDex removed scans).
  */
 router.get('/:id/chapters', async (req: Request, res: Response) => {
     try {
         const { id } = req.params
-        const { limit = '100', offset = '0', order = 'desc' } = req.query
+        const { order = 'asc' } = req.query
 
-        const url = new URL(`${MANGADEX_API}/manga/${id}/feed`)
-        url.searchParams.append('limit', String(limit))
-        url.searchParams.append('offset', String(offset))
-        url.searchParams.append('translatedLanguage[]', 'en')
-        url.searchParams.append('order[chapter]', String(order))
-        url.searchParams.append('includeEmptyPages', '0')
+        const BATCH_SIZE = 500
 
-        const response = await fetch(url.toString())
-        const data = await response.json()
+        // --- Step 1: Fetch English chapters from MangaDex ---
+        async function fetchMangaDexChapters(): Promise<any[]> {
+            let allRaw: any[] = []
+            let offset = 0
+            let total = Infinity
 
-        const chapters = (data.data || []).map((ch: any) => ({
+            while (offset < total) {
+                const url = new URL(`${MANGADEX_API}/manga/${id}/feed`)
+                url.searchParams.append('limit', String(BATCH_SIZE))
+                url.searchParams.append('offset', String(offset))
+                url.searchParams.append('translatedLanguage[]', 'en')
+                url.searchParams.append('order[chapter]', String(order))
+                url.searchParams.append('includeEmptyPages', '0')
+
+                const response = await fetch(url.toString())
+                const data = await response.json()
+
+                if (!data.data || data.data.length === 0) break
+
+                total = data.total ?? 0
+                allRaw = allRaw.concat(data.data)
+                offset += data.data.length
+
+                if (data.data.length < BATCH_SIZE) break
+            }
+            return allRaw
+        }
+
+        const rawMDX = await fetchMangaDexChapters()
+        const mdxChapters = rawMDX.map((ch: any) => ({
             id: ch.id,
             number: parseFloat(ch.attributes.chapter || '0'),
             title: ch.attributes.title || `Chapter ${ch.attributes.chapter || '?'}`,
             pages: ch.attributes.pages || 0,
             releasedAt: ch.attributes.publishAt || ch.attributes.createdAt || new Date().toISOString(),
             isRead: false,
+            source: 'mangadex',
         }))
 
-        // Remove duplicates (keep first occurrence of each chapter number)
-        const seen = new Set<number>()
-        const uniqueChapters = chapters.filter((ch: any) => {
-            if (seen.has(ch.number)) return false
-            seen.add(ch.number)
-            return true
-        })
+        // Deduplicate by chapter number
+        const dedup = (list: any[]) => {
+            const seen = new Set<number>()
+            return list.filter((ch: any) => {
+                if (seen.has(ch.number)) return false
+                seen.add(ch.number)
+                return true
+            })
+        }
 
-        res.json({
-            data: uniqueChapters,
-            total: data.total || 0,
-        })
+        // --- Step 2: If MangaDex has enough chapters, return them ---
+        if (mdxChapters.length >= 10) {
+            const unique = dedup(mdxChapters)
+            res.json({ data: unique, total: unique.length })
+            return
+        }
+
+        // --- Step 3: Fallback — MangaPill (consumet provider, works for licensed titles) ---
+        console.log(`[Chapters] MangaDex has only ${mdxChapters.length} EN chapters for ${id}, trying MangaPill...`)
+
+        try {
+            // Get manga title from MangaDex
+            const detailData = await (await fetch(new URL(`${MANGADEX_API}/manga/${id}`).toString())).json()
+            const attrs = detailData.data?.attributes
+            const title: string =
+                attrs?.altTitles?.find((t: any) => t.en)?.en ||
+                attrs?.title?.en ||
+                attrs?.title?.['en-ro'] ||
+                Object.values(attrs?.title || {})[0] as string ||
+                ''
+
+            if (!title) throw new Error('Could not determine manga title')
+
+            // Helper: check if two titles share enough words (>= 50% overlap)
+            const titleMatch = (a: string, b: string): boolean => {
+                const wa = new Set(a.toLowerCase().split(/\s+/).filter(w => w.length > 2))
+                const wb = new Set(b.toLowerCase().split(/\s+/).filter(w => w.length > 2))
+                if (wa.size === 0) return false
+                let shared = 0
+                wa.forEach(w => { if (wb.has(w)) shared++ })
+                return (shared / wa.size) >= 0.5
+            }
+
+            // Try multiple search terms to find the right manga
+            const searchTerms = [title]
+            // Also try alt English titles from MangaDex
+            if (attrs?.altTitles) {
+                const enAlts = attrs.altTitles.filter((t: any) => t.en || t['en-us']).map((t: any) => t.en || t['en-us']).filter(Boolean)
+                searchTerms.push(...enAlts.slice(0, 2))
+            }
+
+            let best: any = null
+            for (const term of searchTerms) {
+                const searchResults = await weebCentral.search(term)
+                const candidates = (searchResults?.results || []).filter((r: any) => {
+                    const t = (r.title as string || '').toLowerCase()
+                    return !t.includes('novel') && !t.includes('light novel') && !t.includes('web novel')
+                })
+                // Find a result whose title matches our search term
+                const match = candidates.find((r: any) => titleMatch(term, r.title as string))
+                if (match) { best = match; break }
+            }
+
+            if (!best) throw new Error(`No matching manga found on WeebCentral for: ${title}`)
+            console.log(`[WeebCentral] Matched: "${best.title}" (id: ${best.id}) for "${title}"`)
+
+            // Fetch all chapters
+            const info = await weebCentral.fetchMangaInfo(best.id as string)
+            const rawChapters: any[] = info.chapters || []
+            if (!rawChapters.length) throw new Error(`No chapters on WeebCentral for: ${title}`)
+
+            // WeebCentral returns newest-first; reverse for ascending
+            const ordered = order === 'asc' ? [...rawChapters].reverse() : rawChapters
+
+            const wbcChapters = ordered.map((ch: any, i: number) => {
+                // WeebCentral has no chapter number field — extract from title e.g. "Chapter 200"
+                const titleStr: string = ch.title || ''
+                const numMatch = titleStr.match(/chapter\s+([\d.]+)/i)
+                const num = numMatch ? parseFloat(numMatch[1]) : (ordered.length - i)
+                return {
+                    id: `wbc:${ch.id}`,
+                    number: num,
+                    title: titleStr || `Chapter ${num}`,
+                    pages: 0,
+                    releasedAt: ch.releaseDate || new Date().toISOString(),
+                    isRead: false,
+                }
+            })
+
+            const unique = dedup(wbcChapters)
+            res.json({ data: unique, total: unique.length })
+        } catch (fallbackErr: any) {
+            console.error('[Chapters] WeebCentral fallback failed:', fallbackErr?.message || fallbackErr)
+            const unique = dedup(mdxChapters)
+            res.json({ data: unique, total: unique.length })
+        }
     } catch (error) {
         console.error('Chapters error:', error)
         res.status(500).json({ error: 'Failed to get chapters' })
@@ -346,13 +455,40 @@ router.get('/:id/chapters', async (req: Request, res: Response) => {
 })
 
 /**
- * GET /api/manga/chapter/:chapterId/pages
- * Get page image URLs for a chapter
+ * GET /api/manga/chapter/pages?id=<chapterId>
+ * Get page image URLs. Uses query param to avoid URL encoding issues with slashed IDs.
+ */
+router.get('/chapter/pages', async (req: Request, res: Response) => {
+    const chapterId = req.query.id as string
+    if (!chapterId) { res.status(400).json({ error: 'Missing id param' }); return }
+    await serveChapterPages(chapterId, req, res)
+})
+
+/**
+ * GET /api/manga/chapter/:chapterId/pages  (legacy path-param route)
  */
 router.get('/chapter/:chapterId/pages', async (req: Request, res: Response) => {
-    try {
-        const { chapterId } = req.params
+    await serveChapterPages(req.params.chapterId, req, res)
+})
 
+async function serveChapterPages(chapterId: string, req: Request, res: Response) {
+    try {
+        // --- WeebCentral chapter (wbc: prefix) ---
+        if (chapterId.startsWith('wbc:')) {
+            const wbcId = chapterId.slice(4)
+            console.log('[Pages] WeebCentral chapter:', wbcId)
+            const wbcPages = await weebCentral.fetchChapterPages(wbcId)
+            console.log('[Pages] WeebCentral returned', wbcPages.length, 'pages')
+            const pages = wbcPages.map((p: any, i: number) => ({
+                index: i + 1,
+                url: p.img || p.url || '',
+                hdUrl: p.img || p.url || null,
+            }))
+            res.json({ data: pages, total: pages.length })
+            return
+        }
+
+        // --- MangaDex chapter (UUID) ---
         const response = await fetch(`${MANGADEX_API}/at-home/server/${chapterId}`)
         const data = await response.json()
 
@@ -363,22 +499,17 @@ router.get('/chapter/:chapterId/pages', async (req: Request, res: Response) => {
 
         const { baseUrl, chapter } = data
         const hash = chapter.hash
-
-        // Use data-saver images for faster loading
         const pages = (chapter.dataSaver || chapter.data || []).map((filename: string, index: number) => ({
             index: index + 1,
             url: `${baseUrl}/data-saver/${hash}/${filename}`,
             hdUrl: chapter.data?.[index] ? `${baseUrl}/data/${hash}/${chapter.data[index]}` : null,
         }))
 
-        res.json({
-            data: pages,
-            total: pages.length,
-        })
+        res.json({ data: pages, total: pages.length })
     } catch (error) {
         console.error('Chapter pages error:', error)
         res.status(500).json({ error: 'Failed to get chapter pages' })
     }
-})
+}
 
 export default router

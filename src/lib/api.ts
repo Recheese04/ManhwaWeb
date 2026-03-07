@@ -125,7 +125,7 @@ export async function getMangaChapters(
 
 /** Get page image URLs for a chapter */
 export async function getChapterPages(chapterId: string): Promise<PaginatedResponse<ApiPage>> {
-    return apiFetch(`/manga/chapter/${chapterId}/pages`)
+    return apiFetch(`/manga/chapter/pages?id=${encodeURIComponent(chapterId)}`)
 }
 
 // ============ USER ENDPOINTS (AUTH REQUIRED) ============

@@ -42,6 +42,7 @@ export default function Browse() {
     const [selectedStatus, setSelectedStatus] = useState(searchParams.get('status') || '')
     const [selectedGenres, setSelectedGenres] = useState<string[]>([])
     const [filtersOpen, setFiltersOpen] = useState(false)
+    const [searchFocused, setSearchFocused] = useState(false)
     const [results, setResults] = useState<ApiManga[]>([])
     const [total, setTotal] = useState(0)
     const [loading, setLoading] = useState(true)
@@ -173,7 +174,16 @@ export default function Browse() {
     )
 
     return (
-        <div className="min-h-screen max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <div
+            className="min-h-screen max-w-7xl mx-auto px-4 sm:px-6 py-8"
+            onFocus={() => setSearchFocused(true)}
+            onBlur={(e) => {
+                // If the new focus target is outside this container, hide filters
+                if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                    setSearchFocused(false)
+                }
+            }}
+        >
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-bold">Browse Library</h1>
@@ -193,31 +203,34 @@ export default function Browse() {
                         onChange={e => { setSearch(e.target.value); setPage(0) }}
                     />
                 </div>
-                <div className="flex gap-2">
-                    <div className="relative">
-                        <select
-                            value={sort}
-                            onChange={e => setSort(e.target.value as SortOption)}
-                            className="appearance-none h-10 pl-3 pr-8 rounded-lg border border-border bg-background text-sm text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
+
+                {searchFocused && (
+                    <div className="flex gap-2 animate-fade-in-fast">
+                        <div className="relative">
+                            <select
+                                value={sort}
+                                onChange={e => setSort(e.target.value as SortOption)}
+                                className="appearance-none h-10 pl-3 pr-8 rounded-lg border border-border bg-background text-sm text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
+                            >
+                                {sortOptions.map(opt => (
+                                    <option key={opt.value} value={opt.value} className="bg-background">{opt.label}</option>
+                                ))}
+                            </select>
+                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                        </div>
+                        <Button
+                            variant={filtersOpen ? 'default' : 'outline'}
+                            size="icon"
+                            onClick={() => setFiltersOpen(!filtersOpen)}
                         >
-                            {sortOptions.map(opt => (
-                                <option key={opt.value} value={opt.value} className="bg-background">{opt.label}</option>
-                            ))}
-                        </select>
-                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                            <SlidersHorizontal className="w-4 h-4" />
+                        </Button>
                     </div>
-                    <Button
-                        variant={filtersOpen ? 'default' : 'outline'}
-                        size="icon"
-                        onClick={() => setFiltersOpen(!filtersOpen)}
-                    >
-                        <SlidersHorizontal className="w-4 h-4" />
-                    </Button>
-                </div>
+                )}
             </div>
 
-            {hasFilters && (
-                <div className="flex flex-wrap items-center gap-2 mb-4">
+            {(hasFilters && searchFocused) && (
+                <div className="flex flex-wrap items-center gap-2 mb-4 animate-fade-in-fast">
                     <span className="text-xs text-muted-foreground">Active filters:</span>
                     {selectedType && (
                         <Badge variant="info" className="text-xs capitalize cursor-pointer" onClick={() => setSelectedType('')}>
