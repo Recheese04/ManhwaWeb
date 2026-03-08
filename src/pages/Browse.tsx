@@ -40,7 +40,18 @@ export default function Browse() {
     const [sort, setSort] = useState<SortOption>((searchParams.get('sort') as SortOption) || 'popular')
     const [selectedType, setSelectedType] = useState(searchParams.get('type') || '')
     const [selectedStatus, setSelectedStatus] = useState(searchParams.get('status') || '')
-    const [selectedGenres, setSelectedGenres] = useState<string[]>([])
+
+    // Parse genres from URL and ensure they match the correct casing found in GENRES
+    const initialGenres = useMemo(() => {
+        const urlGenres = searchParams.get('genre')
+        if (!urlGenres) return []
+        return urlGenres.split(',').map(g => {
+            const match = GENRES.find(x => x.toLowerCase() === g.trim().toLowerCase())
+            return match || g.trim()
+        })
+    }, [searchParams])
+
+    const [selectedGenres, setSelectedGenres] = useState<string[]>(initialGenres)
     const [filtersOpen, setFiltersOpen] = useState(false)
     const [searchFocused, setSearchFocused] = useState(false)
     const [results, setResults] = useState<ApiManga[]>([])
@@ -58,6 +69,7 @@ export default function Browse() {
         searchManga(search, {
             type: selectedType || undefined,
             status: selectedStatus || undefined,
+            genres: selectedGenres,
             limit: LIMIT,
             offset: page * LIMIT,
         })
@@ -76,12 +88,13 @@ export default function Browse() {
             })
 
         return () => { cancelled = true }
-    }, [search, selectedType, selectedStatus, sort, page])
+    }, [search, selectedType, selectedStatus, selectedGenres, sort, page])
 
     const toggleGenre = (genre: string) => {
         setSelectedGenres(prev =>
             prev.includes(genre) ? prev.filter(g => g !== genre) : [...prev, genre]
         )
+        setPage(0)
     }
 
     const clearFilters = () => {
@@ -95,11 +108,8 @@ export default function Browse() {
 
     const hasFilters = selectedType !== '' || selectedStatus !== '' || selectedGenres.length > 0
 
-    // Client-side genre filtering (MangaDex uses UUIDs for tags)
-    const filteredResults = useMemo(() => {
-        if (selectedGenres.length === 0) return results
-        return results.filter(m => selectedGenres.some(g => m.genres.map(x => x.toLowerCase()).includes(g.toLowerCase())))
-    }, [results, selectedGenres])
+    // The backend now handles the genre filtering
+    const filteredResults = results
 
     const totalPages = Math.ceil(total / LIMIT)
 

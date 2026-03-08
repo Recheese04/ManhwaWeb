@@ -149,7 +149,7 @@ export default function TitleDetail() {
 
                         <div className="flex flex-wrap gap-2 mb-6">
                             {manga.genres.map(genre => (
-                                <Link key={genre} to={`/browse?genre=${genre.toLowerCase()}`}>
+                                <Link key={genre} to={`/browse?genre=${encodeURIComponent(genre)}`}>
                                     <Badge variant="secondary" className="hover:bg-sky-500/10 hover:text-sky-600 dark:hover:text-sky-400 transition-colors cursor-pointer">
                                         {genre}
                                     </Badge>

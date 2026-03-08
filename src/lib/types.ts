@@ -63,10 +63,20 @@ export interface Review {
 }
 
 export const GENRES = [
-    'Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy',
-    'Horror', 'Isekai', 'Martial Arts', 'Mystery', 'Romance',
-    'Sci-Fi', 'Slice of Life', 'Sports', 'Supernatural', 'Thriller',
-    'Tragedy', 'School Life', 'Shounen', 'Shoujo', 'Seinen',
+    'Thriller', 'Reincarnation', 'Sci-Fi', 'Time Travel', 'Genderswap',
+    'Loli', 'Traditional Games', 'Historical', 'Monsters', 'Action',
+    'Demons', 'Psychological', 'Ghosts', 'Animals', 'Romance',
+    'Ninja', 'Comedy', 'Mecha', 'Boys\' Love', 'Incest',
+    'Crime', 'Survival', 'Zombies', 'Reverse Harem', 'Sports',
+    'Superhero', 'Martial Arts', 'Samurai', 'Magical Girls', 'Mafia',
+    'Adventure', 'Virtual Reality', 'Office Workers', 'Video Games', 'Post-Apocalyptic',
+    'Crossdressing', 'Magic', 'Girls\' Love', 'Harem', 'Military',
+    'Wuxia', 'Isekai', 'Philosophical', 'Drama', 'Medical',
+    'School Life', 'Mahjong', 'Horror', 'Fantasy', 'Villainess',
+    'Vampires', 'Delinquents', 'Monster Girls', 'Shota', 'Police',
+    'Slice of Life', 'Aliens', 'Cooking', 'Supernatural', 'Mystery',
+    'Music', 'Tragedy', 'Gyaru', 'Shounen', 'Shoujo',
+    'Seinen', 'Josei',
 ] as const
 
 export type Genre = typeof GENRES[number]

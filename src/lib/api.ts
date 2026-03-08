@@ -86,12 +86,13 @@ export interface PaginatedResponse<T> {
 /** Search manga by title */
 export async function searchManga(
     query: string,
-    options?: { type?: string; status?: string; limit?: number; offset?: number }
+    options?: { type?: string; status?: string; genres?: string[]; limit?: number; offset?: number }
 ): Promise<PaginatedResponse<ApiManga>> {
     const params = new URLSearchParams()
     if (query) params.append('q', query)
     if (options?.type) params.append('type', options.type)
     if (options?.status) params.append('status', options.status)
+    if (options?.genres?.length) params.append('genre', options.genres.join(','))
     if (options?.limit) params.append('limit', String(options.limit))
     if (options?.offset) params.append('offset', String(options.offset))
     return apiFetch(`/manga/search?${params.toString()}`)
