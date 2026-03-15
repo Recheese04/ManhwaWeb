@@ -52,6 +52,11 @@ export default function Browse() {
     }, [searchParams])
 
     const [selectedGenres, setSelectedGenres] = useState<string[]>(initialGenres)
+
+    // Sync selectedGenres when URL changes
+    useEffect(() => {
+        setSelectedGenres(initialGenres)
+    }, [initialGenres])
     const [filtersOpen, setFiltersOpen] = useState(false)
     const [searchFocused, setSearchFocused] = useState(false)
     const [results, setResults] = useState<ApiManga[]>([])

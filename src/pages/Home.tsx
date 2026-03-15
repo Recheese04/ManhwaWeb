@@ -13,7 +13,7 @@ import { GENRES } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import type { ApiManga } from '@/lib/api'
 
-type TabType = 'all' | 'manga' | 'manhwa' | 'manhua'
+type TabType = 'all' | 'manga' | 'manhwa' | 'manhua' | 'bl' | 'gl'
 
 function formatViews(views: number): string {
     if (views >= 1_000_000) return `${(views / 1_000_000).toFixed(1)}M`
@@ -58,9 +58,13 @@ export default function Home() {
         return () => clearInterval(interval)
     }, [nextSlide, carouselItems.length])
 
-    // Filter by type tab
-    const filterByTab = (list: ApiManga[]) =>
-        activeTab === 'all' ? list : list.filter(m => m.type === activeTab)
+    // Filter by type or genre tab
+    const filterByTab = (list: ApiManga[]) => {
+        if (activeTab === 'all') return list
+        if (activeTab === 'bl') return list.filter(m => m.genres.includes('Boys\' Love'))
+        if (activeTab === 'gl') return list.filter(m => m.genres.includes('Girls\' Love'))
+        return list.filter(m => m.type === activeTab)
+    }
 
     const trending = filterByTab(popular).slice(0, 6)
     const latestUpdates = filterByTab(latest).slice(0, 8)
@@ -71,6 +75,8 @@ export default function Home() {
         { label: 'Manga', value: 'manga' },
         { label: 'Manhwa', value: 'manhwa' },
         { label: 'Manhua', value: 'manhua' },
+        { label: 'BL', value: 'bl' },
+        { label: 'GL', value: 'gl' },
     ]
 
     const currentManga = carouselItems[currentSlide]

@@ -16,9 +16,11 @@ const navLinks = [
 ]
 
 const typeFilters = [
-    { label: 'Manga', value: 'manga', color: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-500/30' },
-    { label: 'Manhwa', value: 'manhwa', color: 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-300 dark:border-sky-500/30' },
-    { label: 'Manhua', value: 'manhua', color: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-500/30' },
+    { label: 'Manga', value: 'manga', type: 'type', color: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-500/30' },
+    { label: 'Manhwa', value: 'manhwa', type: 'type', color: 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-300 dark:border-sky-500/30' },
+    { label: 'Manhua', value: 'manhua', type: 'type', color: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-500/30' },
+    { label: 'BL', value: 'Boys\' Love', type: 'genre', color: 'bg-fuchsia-500/15 text-fuchsia-600 dark:text-fuchsia-400 border-fuchsia-300 dark:border-fuchsia-500/30' },
+    { label: 'GL', value: 'Girls\' Love', type: 'genre', color: 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-500/30' },
 ]
 
 // Search Autocomplete Component
@@ -142,8 +144,10 @@ export default function Navbar() {
     const { theme, toggleTheme } = useTheme()
     const { user } = useAuth()
 
-    // Check if current path matches a type filter
-    const currentType = new URLSearchParams(location.search).get('type')
+    // Check if current path matches a type or genre filter
+    const searchParams = new URLSearchParams(location.search)
+    const currentType = searchParams.get('type')
+    const currentGenre = searchParams.get('genre')
 
     return (
         <>
@@ -177,20 +181,29 @@ export default function Navbar() {
 
                             {/* Type filter pills */}
                             <div className="flex items-center gap-1 ml-1 pl-2 border-l border-border/50">
-                                {typeFilters.map(filter => (
-                                    <Link
-                                        key={filter.value}
-                                        to={`/browse?type=${filter.value}`}
-                                        className={cn(
-                                            'px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200',
-                                            currentType === filter.value
-                                                ? filter.color
-                                                : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted'
-                                        )}
-                                    >
-                                        {filter.label}
-                                    </Link>
-                                ))}
+                                {typeFilters.map(filter => {
+                                    const isActive = filter.type === 'type'
+                                        ? currentType === filter.value
+                                        : currentGenre === filter.value
+
+                                    return (
+                                        <Link
+                                            key={filter.value}
+                                            to={filter.type === 'type'
+                                                ? `/browse?type=${filter.value}`
+                                                : `/browse?genre=${encodeURIComponent(filter.value)}`
+                                            }
+                                            className={cn(
+                                                'px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200',
+                                                isActive
+                                                    ? filter.color
+                                                    : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted'
+                                            )}
+                                        >
+                                            {filter.label}
+                                        </Link>
+                                    )
+                                })}
                             </div>
                         </nav>
 
@@ -269,20 +282,29 @@ export default function Navbar() {
 
                     {/* Mobile Type Filter Pills — shown below search on mobile */}
                     <div className="lg:hidden flex items-center gap-1.5 pb-2 overflow-x-auto hide-scrollbar -mx-1 px-1">
-                        {typeFilters.map(filter => (
-                            <Link
-                                key={filter.value}
-                                to={`/browse?type=${filter.value}`}
-                                className={cn(
-                                    'px-3 py-1 rounded-full text-[11px] font-semibold border transition-all duration-200 whitespace-nowrap shrink-0',
-                                    currentType === filter.value
-                                        ? filter.color
-                                        : 'border-border/60 text-muted-foreground hover:text-foreground'
-                                )}
-                            >
-                                {filter.label}
-                            </Link>
-                        ))}
+                        {typeFilters.map(filter => {
+                            const isActive = filter.type === 'type'
+                                ? currentType === filter.value
+                                : currentGenre === filter.value
+
+                            return (
+                                <Link
+                                    key={filter.value}
+                                    to={filter.type === 'type'
+                                        ? `/browse?type=${filter.value}`
+                                        : `/browse?genre=${encodeURIComponent(filter.value)}`
+                                    }
+                                    className={cn(
+                                        'px-3 py-1 rounded-full text-[11px] font-semibold border transition-all duration-200 whitespace-nowrap shrink-0',
+                                        isActive
+                                            ? filter.color
+                                            : 'border-border/60 text-muted-foreground hover:text-foreground'
+                                    )}
+                                >
+                                    {filter.label}
+                                </Link>
+                            )
+                        })}
                     </div>
                 </div>
             </header>
