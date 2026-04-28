@@ -10,19 +10,14 @@ interface Source {
 }
 
 interface WatchData {
-    sources: Source[]
-    subtitles: any[]
+    sources?: Source[]
+    embedUrl?: string
+    episodeId?: string
+    title?: string
     provider: string
 }
 
 const Watch: React.FC = () => {
-    const { episodeId } = useParams<{ episodeId: string }>() // this is actually the episode number now
-    // We need the anilistId which we passed in the URL or we can extract it if we changed the route
-    // Wait, in App.tsx I have: path="/anime/watch/:episodeId"
-    // But in AnimeDetail.tsx I link to: `/anime/watch/${id}/${ep.number}`
-    // So the route in App.tsx needs updating to handle TWO params.
-    
-    // I'll assume the URL is /anime/watch/:anilistId/:episodeNumber
     const { anilistId, episodeNumber } = useParams<{ anilistId: string, episodeNumber: string }>()
     
     const [watchData, setWatchData] = useState<WatchData | null>(null)
@@ -36,7 +31,7 @@ const Watch: React.FC = () => {
     }, [anilistId, episodeNumber])
 
     useEffect(() => {
-        if (currentSource && videoRef.current) {
+        if (currentSource && videoRef.current && !watchData?.embedUrl) {
             const video = videoRef.current
             const url = currentSource.url
 
@@ -55,7 +50,7 @@ const Watch: React.FC = () => {
                 })
             }
         }
-    }, [currentSource])
+    }, [currentSource, watchData])
 
     const fetchSources = async () => {
         setLoading(true)
@@ -64,13 +59,22 @@ const Watch: React.FC = () => {
             const res = await fetch(`/api/anime/watch/${anilistId}/${episodeNumber}`)
             const data = await res.json()
             if (data.error) throw new Error(data.error)
-            
-            const availableSources = data.data.sources || []
+
+            // Proxy all source URLs through our server to bypass CORS
+            if (data.data.sources) {
+                const proxiedSources = data.data.sources.map((s: any) => ({
+                    ...s,
+                    url: `/api/stream-proxy?url=${encodeURIComponent(s.url)}`,
+                }))
+                data.data.sources = proxiedSources
+            }
             setWatchData(data.data)
-            
-            // Default to high quality or first source
-            const defaultSource = availableSources.find((s: any) => s.quality === 'default' || s.quality === '1080p') || availableSources[0]
-            setCurrentSource(defaultSource)
+
+            if (data.data.sources) {
+                const availableSources = data.data.sources || []
+                const defaultSource = availableSources.find((s: any) => s.quality === 'default' || s.quality === '1080p') || availableSources[0]
+                setCurrentSource(defaultSource)
+            }
         } catch (err: any) {
             setError(err.message || 'Failed to find streaming links for this episode.')
         } finally {
@@ -104,6 +108,13 @@ const Watch: React.FC = () => {
                             <p className="text-xl font-bold text-slate-300">{error}</p>
                             <p className="text-sm text-slate-500 max-w-md">Some providers might be down or this episode hasn't been scraped yet. Try again later or try another episode.</p>
                         </div>
+                    ) : watchData?.embedUrl ? (
+                        <iframe 
+                            src={watchData.embedUrl}
+                            className="w-full h-full"
+                            allowFullScreen
+                            scrolling="no"
+                        />
                     ) : (
                         <video 
                             ref={videoRef}
@@ -113,12 +124,14 @@ const Watch: React.FC = () => {
                     )}
                 </div>
 
-                {/* Controls & Source Selection */}
+                {/* Controls & Info */}
                 {!loading && !error && (
                     <div className="mt-8 flex flex-col md:flex-row gap-8">
                         <div className="flex-1">
                             <div className="bg-slate-900/50 border border-slate-800 p-8 rounded-3xl backdrop-blur-md">
-                                <h2 className="text-2xl font-black mb-2">Episode {episodeNumber}</h2>
+                                <h2 className="text-2xl font-black mb-2">
+                                    {watchData?.title || `Episode ${episodeNumber}`}
+                                </h2>
                                 <p className="text-slate-400 flex items-center gap-2 mb-6">
                                     <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                                     Streaming from: <span className="text-sky-400 font-bold">{watchData?.provider}</span>
@@ -138,28 +151,30 @@ const Watch: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="w-full md:w-80">
-                            <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-3xl backdrop-blur-md">
-                                <h3 className="text-lg font-bold flex items-center gap-2 mb-4">
-                                    <Settings size={18} className="text-sky-400" /> Select Quality
-                                </h3>
-                                <div className="space-y-2">
-                                    {watchData?.sources.map((s, idx) => (
-                                        <button 
-                                            key={idx}
-                                            onClick={() => setCurrentSource(s)}
-                                            className={`w-full text-left px-4 py-3 rounded-xl transition-all font-medium ${
-                                                currentSource?.url === s.url 
-                                                ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/30' 
-                                                : 'bg-slate-800/50 text-slate-400 hover:bg-slate-800'
-                                            }`}
-                                        >
-                                            {s.quality.toUpperCase()} Quality
-                                        </button>
-                                    ))}
+                        {watchData?.sources && watchData.sources.length > 0 && (
+                            <div className="w-full md:w-80">
+                                <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-3xl backdrop-blur-md">
+                                    <h3 className="text-lg font-bold flex items-center gap-2 mb-4">
+                                        <Settings size={18} className="text-sky-400" /> Select Quality
+                                    </h3>
+                                    <div className="space-y-2">
+                                        {watchData.sources.map((s, idx) => (
+                                            <button 
+                                                key={idx}
+                                                onClick={() => setCurrentSource(s)}
+                                                className={`w-full text-left px-4 py-3 rounded-xl transition-all font-medium ${
+                                                    currentSource?.url === s.url 
+                                                    ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/30' 
+                                                    : 'bg-slate-800/50 text-slate-400 hover:bg-slate-800'
+                                                }`}
+                                            >
+                                                {s.quality.toUpperCase()} Quality
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 )}
             </div>

@@ -44,8 +44,8 @@ export default function App() {
                             <Route path="/manga/:slug" element={<TitleDetail />} />
                             <Route path="/profile" element={<Profile />} />
                             <Route path="/anime" element={<Anime />} />
-                            <Route path="/anime/:id" element={<AnimeDetail />} />
                             <Route path="/anime/watch/:anilistId/:episodeNumber" element={<Watch />} />
+                            <Route path="/anime/:id" element={<AnimeDetail />} />
                         </Routes>
                     </MainLayout>
                 }

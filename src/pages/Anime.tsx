@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Play, Search, Flame, Tv, Star, Loader2 } from 'lucide-react'
+import { Play, Search, Flame, Tv, Star, Loader2, Clock } from 'lucide-react'
 
 interface Anime {
     id: string
@@ -15,6 +15,7 @@ interface Anime {
 
 const Anime: React.FC = () => {
     const [trending, setTrending] = useState<Anime[]>([])
+    const [recent, setRecent] = useState<Anime[]>([])
     const [loading, setLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
     const [searchResults, setSearchResults] = useState<Anime[]>([])
@@ -22,15 +23,21 @@ const Anime: React.FC = () => {
     const [error, setError] = useState('')
 
     useEffect(() => {
-        fetchTrending()
+        fetchAll()
     }, [])
 
-    const fetchTrending = async () => {
+    const fetchAll = async () => {
+        setLoading(true)
         try {
-            const res = await fetch('/api/anime/popular')
-            const data = await res.json()
-            if (data.error) throw new Error(data.error)
-            setTrending(data.data || [])
+            const [trendingRes, recentRes] = await Promise.all([
+                fetch('/api/anime/popular'),
+                fetch('/api/anime/recent')
+            ])
+            const trendingData = await trendingRes.json()
+            const recentData = await recentRes.json()
+            
+            setTrending(trendingData.data || [])
+            setRecent(recentData.data || [])
         } catch (err: any) {
             setError(err.message || 'Failed to load anime')
         } finally {
@@ -106,7 +113,7 @@ const Anime: React.FC = () => {
                                 Clear
                             </button>
                         </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
                             {searchResults.map(anime => <AnimeCard key={anime.id} anime={anime} />)}
                         </div>
                     </section>
@@ -120,6 +127,19 @@ const Anime: React.FC = () => {
                     </div>
                 )}
 
+                {/* Recent Updates */}
+                {!error && !loading && recent.length > 0 && (
+                    <section className="mb-16">
+                        <div className="flex items-center gap-2 mb-8">
+                            <Clock className="text-sky-400" />
+                            <h2 className="text-2xl font-bold">Recent Updates</h2>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
+                            {recent.map(anime => <AnimeCard key={anime.id} anime={anime} />)}
+                        </div>
+                    </section>
+                )}
+
                 {/* Trending Section */}
                 {!error && (
                     <section>
@@ -129,7 +149,7 @@ const Anime: React.FC = () => {
                         </div>
 
                         {loading ? (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
                                 {[...Array(12)].map((_, i) => (
                                     <div key={i} className="aspect-[3/4] bg-slate-900 rounded-2xl animate-pulse" />
                                 ))}
@@ -140,7 +160,7 @@ const Anime: React.FC = () => {
                                 <p>No anime loaded. Check if your server is running.</p>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
                                 {trending.map(anime => <AnimeCard key={anime.id} anime={anime} />)}
                             </div>
                         )}
@@ -160,16 +180,16 @@ const AnimeCard = ({ anime }: { anime: Anime }) => (
                 alt={anime.title}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
-            <div className="absolute bottom-0 left-0 right-0 p-3 z-10">
-                <p className="text-xs font-bold line-clamp-2 drop-shadow-lg leading-tight">{anime.title}</p>
-                <div className="flex items-center gap-2 mt-1">
+            <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
+                <p className="text-sm font-bold line-clamp-2 drop-shadow-lg leading-tight">{anime.title}</p>
+                <div className="flex items-center gap-2 mt-1.5">
                     {anime.rating && (
-                        <span className="flex items-center gap-1 text-[10px] text-amber-400">
-                            <Star size={10} fill="currentColor" />{anime.rating}
+                        <span className="flex items-center gap-1 text-xs text-amber-400">
+                            <Star size={12} fill="currentColor" />{anime.rating}
                         </span>
                     )}
                     {anime.totalEpisodes && (
-                        <span className="text-[10px] text-slate-400">{anime.totalEpisodes} eps</span>
+                        <span className="text-xs text-slate-400">{anime.totalEpisodes} eps</span>
                     )}
                 </div>
             </div>

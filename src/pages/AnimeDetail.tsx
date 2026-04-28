@@ -34,9 +34,13 @@ const AnimeDetail: React.FC = () => {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
     const [showFillerFilter, setShowFillerFilter] = useState(false)
+    const [selectedRange, setSelectedRange] = useState(0) // Index of 100-episode chunks
 
     useEffect(() => {
-        if (id) fetchInfo()
+        if (id) {
+            fetchInfo()
+            setSelectedRange(0) // Reset range on new anime
+        }
     }, [id])
 
     const fetchInfo = async () => {
@@ -68,9 +72,24 @@ const AnimeDetail: React.FC = () => {
         </div>
     )
 
-    const displayedEpisodes = showFillerFilter
+    // Episode range logic
+    const chunkSize = 100
+    const totalEpisodes = info.episodes.length
+    const ranges = []
+    for (let i = 0; i < totalEpisodes; i += chunkSize) {
+        const start = i + 1
+        const end = Math.min(i + chunkSize, totalEpisodes)
+        ranges.push(`${start}-${end}`)
+    }
+
+    const filteredEpisodes = showFillerFilter
         ? info.episodes.filter(ep => !ep.isFiller)
         : info.episodes
+
+    const displayedEpisodes = filteredEpisodes.slice(
+        selectedRange * chunkSize,
+        (selectedRange + 1) * chunkSize
+    )
 
     return (
         <div className="min-h-screen bg-slate-950 text-white pb-20">
@@ -159,23 +178,40 @@ const AnimeDetail: React.FC = () => {
                 {/* Episodes List */}
                 {info.episodes.length > 0 && (
                     <div className="mt-12">
-                        <div className="flex items-center justify-between mb-6">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                             <h2 className="text-2xl font-bold flex items-center gap-2">
                                 <List className="text-sky-400" /> Episodes ({info.episodes.length})
                             </h2>
-                            <button
-                                onClick={() => setShowFillerFilter(!showFillerFilter)}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
-                                    showFillerFilter
-                                        ? 'bg-sky-500/10 border-sky-500/50 text-sky-400'
-                                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
-                                }`}
-                            >
-                                <Filter size={16} /> Hide Filler
-                            </button>
+                            
+                            <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
+                                {ranges.length > 1 && ranges.map((range, idx) => (
+                                    <button
+                                        key={range}
+                                        onClick={() => setSelectedRange(idx)}
+                                        className={`shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                                            selectedRange === idx
+                                                ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/20'
+                                                : 'bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700'
+                                        }`}
+                                    >
+                                        {range}
+                                    </button>
+                                ))}
+                                
+                                <button
+                                    onClick={() => setShowFillerFilter(!showFillerFilter)}
+                                    className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-bold transition-all ml-2 ${
+                                        showFillerFilter
+                                            ? 'bg-sky-500/10 border-sky-500/50 text-sky-400'
+                                            : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
+                                    }`}
+                                >
+                                    <Filter size={14} /> Hide Filler
+                                </button>
+                            </div>
                         </div>
 
-                        <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-8 lg:grid-cols-10 gap-2">
+                        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
                             {displayedEpisodes.map(ep => (
                                 <Link
                                     key={ep.id}

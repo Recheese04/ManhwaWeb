@@ -3,37 +3,19 @@ import { ANIME } from '@consumet/extensions'
 
 const router = Router()
 
-// ─── AniList GraphQL helpers ───────────────────────────────────────────────
-const ANILIST_URL = 'https://graphql.anilist.co'
+// ─── Jikan (MyAnimeList) helpers ──────────────────────────────────────────
+const JIKAN_URL = 'https://api.jikan.moe/v4'
 
-async function anilistQuery(query: string, variables: Record<string, any> = {}) {
-    const res = await fetch(ANILIST_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ query, variables }),
-    })
-    const json = await res.json()
-    return json.data
+async function jikanFetch(endpoint: string) {
+    const res = await fetch(`${JIKAN_URL}${endpoint}`)
+    if (res.status === 429) {
+        // Rate limited - wait 1s and try once more
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        const retry = await fetch(`${JIKAN_URL}${endpoint}`)
+        return await retry.json()
+    }
+    return await res.json()
 }
-
-const MEDIA_FRAGMENT = `
-    id
-    idMal
-    title { romaji english native }
-    coverImage { extraLarge large }
-    bannerImage
-    description(asHtml: false)
-    genres
-    averageScore
-    popularity
-    episodes
-    status
-    season
-    seasonYear
-    format
-    studios(isMain: true) { nodes { name } }
-    nextAiringEpisode { episode timeUntilAiring }
-`
 
 // ─── Search ────────────────────────────────────────────────────────────────
 router.get('/search', async (req: Request, res: Response) => {
@@ -41,15 +23,8 @@ router.get('/search', async (req: Request, res: Response) => {
         const { q = '' } = req.query
         if (!q) { res.status(400).json({ error: 'Missing search query' }); return }
 
-        const data = await anilistQuery(`
-            query ($search: String) {
-                Page(perPage: 20) {
-                    media(search: $search, type: ANIME, sort: POPULARITY_DESC) { ${MEDIA_FRAGMENT} }
-                }
-            }
-        `, { search: q.toString() })
-
-        const results = (data?.Page?.media || []).map(mapAnilistMedia)
+        const data = await jikanFetch(`/anime?q=${encodeURIComponent(q.toString())}&sfw=true&limit=25`)
+        const results = (data.data || []).map(mapJikanAnime)
         res.json({ data: results })
     } catch (error: any) {
         console.error('Anime search error:', error.message)
@@ -60,15 +35,14 @@ router.get('/search', async (req: Request, res: Response) => {
 // ─── Trending / Popular ───────────────────────────────────────────────────
 router.get('/popular', async (_req: Request, res: Response) => {
     try {
-        const data = await anilistQuery(`
-            query {
-                trending: Page(perPage: 20) {
-                    media(type: ANIME, sort: TRENDING_DESC) { ${MEDIA_FRAGMENT} }
-                }
-            }
-        `)
-
-        const results = (data?.trending?.media || []).map(mapAnilistMedia)
+        console.log('[Anime] Fetching popular anime from Jikan...')
+        const data1 = await jikanFetch('/top/anime?filter=airing&limit=25&page=1')
+        const data2 = await jikanFetch('/top/anime?filter=airing&limit=25&page=2')
+        
+        const allData = [...(data1.data || []), ...(data2.data || [])]
+        console.log(`[Anime] Jikan returned ${allData.length} results total`)
+        
+        const results = allData.map(mapJikanAnime)
         res.json({ data: results })
     } catch (error: any) {
         console.error('Anime popular error:', error.message)
@@ -76,18 +50,11 @@ router.get('/popular', async (_req: Request, res: Response) => {
     }
 })
 
-// ─── Recent / Latest ──────────────────────────────────────────────────────
+// ─── Recent Episodes ──────────────────────────────────────────────────────
 router.get('/recent', async (_req: Request, res: Response) => {
     try {
-        const data = await anilistQuery(`
-            query {
-                Page(perPage: 20) {
-                    media(type: ANIME, status: RELEASING, sort: UPDATED_AT_DESC) { ${MEDIA_FRAGMENT} }
-                }
-            }
-        `)
-
-        const results = (data?.Page?.media || []).map(mapAnilistMedia)
+        const data = await jikanFetch('/seasons/now?limit=25')
+        const results = (data.data || []).map(mapJikanAnime)
         res.json({ data: results })
     } catch (error: any) {
         console.error('Anime recent error:', error.message)
@@ -95,153 +62,154 @@ router.get('/recent', async (_req: Request, res: Response) => {
     }
 })
 
-// ─── Anime Info (AniList + Jikan for episodes) ───────────────────────────
+// ─── Anime Info ──────────────────────────────────────────────────────────
 router.get('/info/:id', async (req: Request, res: Response) => {
     try {
         const { id } = req.params
+        // Jikan uses MAL ID, so we assume :id is the MAL ID now
+        const data = await jikanFetch(`/anime/${id}/full`)
+        const anime = data.data
+        if (!anime) { res.status(404).json({ error: 'Anime not found' }); return }
 
-        // Get metadata from AniList
-        const data = await anilistQuery(`
-            query ($id: Int) {
-                Media(id: $id, type: ANIME) {
-                    ${MEDIA_FRAGMENT}
-                    relations { edges { relationType node { id title { romaji english } coverImage { large } format } } }
-                }
-            }
-        `, { id: parseInt(id) })
-
-        const media = data?.Media
-        if (!media) { res.status(404).json({ error: 'Anime not found' }); return }
-
-        const info = mapAnilistMedia(media)
-
-        // Get episodes from Jikan (MAL) if we have a MAL ID
+        // Fetch ALL episode pages from Jikan (max 100 per page)
         let episodes: any[] = []
-        if (media.idMal) {
+        let page = 1
+        let hasMore = true
+        while (hasMore) {
             try {
-                const jikanRes = await fetch(`https://api.jikan.moe/v4/anime/${media.idMal}/episodes`)
-                const jikanData = await jikanRes.json()
-                episodes = (jikanData.data || []).map((ep: any) => ({
+                const epData = await jikanFetch(`/anime/${id}/episodes?page=${page}`)
+                const pageEps = (epData.data || []).map((ep: any) => ({
                     id: `${id}-episode-${ep.mal_id}`,
                     number: ep.mal_id,
-                    title: ep.title || ep.title_japanese || `Episode ${ep.mal_id}`,
+                    title: ep.title || `Episode ${ep.mal_id}`,
                     isFiller: ep.filler || false,
                 }))
-            } catch (e) {
-                console.warn('Jikan episodes fetch failed, generating from count')
+                episodes = [...episodes, ...pageEps]
+                hasMore = epData.pagination?.has_next_page === true
+                page++
+                // Jikan rate limit: wait 400ms between requests
+                if (hasMore) await new Promise(r => setTimeout(r, 400))
+            } catch {
+                hasMore = false
             }
         }
 
-        // Fallback: generate episode list from AniList episode count
-        if (episodes.length === 0 && media.episodes) {
-            for (let i = 1; i <= media.episodes; i++) {
-                episodes.push({
-                    id: `${id}-episode-${i}`,
-                    number: i,
-                    title: `Episode ${i}`,
-                    isFiller: false,
-                })
+        // 4. Fill in any gaps if we have a total count
+        const totalCount = anime.episodes || 0
+        const currentCount = episodes.length
+        
+        // If we have a total count but the list is incomplete, fill it up
+        if (totalCount > currentCount) {
+            const existingNumbers = new Set(episodes.map(e => e.number))
+            for (let i = 1; i <= totalCount; i++) {
+                if (!existingNumbers.has(i)) {
+                    episodes.push({
+                        id: `${id}-episode-${i}`,
+                        number: i,
+                        title: `Episode ${i}`,
+                        isFiller: false
+                    })
+                }
             }
         }
 
-        // For currently airing with unknown total episodes, generate up to next airing
-        if (episodes.length === 0 && media.nextAiringEpisode) {
-            const currentEp = media.nextAiringEpisode.episode - 1
-            for (let i = 1; i <= currentEp; i++) {
-                episodes.push({
-                    id: `${id}-episode-${i}`,
-                    number: i,
-                    title: `Episode ${i}`,
-                    isFiller: false,
-                })
-            }
-        }
+        // Sort episodes by number just in case
+        episodes.sort((a, b) => a.number - b.number)
 
-        res.json({ data: { ...info, episodes, idMal: media.idMal } })
+        res.json({
+            data: {
+                ...mapJikanAnime(anime),
+                description: anime.synopsis || '',
+                genres: anime.genres?.map((g: any) => g.name) || [],
+                episodes,
+                idMal: anime.mal_id
+            }
+        })
     } catch (error: any) {
         console.error('Anime info error:', error.message)
         res.status(500).json({ error: 'Failed to get anime info' })
     }
 })
 
-// ─── Watch: Multi-source episode streaming ───────────────────────────────
-router.get('/watch/:anilistId/:episode', async (req: Request, res: Response) => {
+// ─── Watch ────────────────────────────────────────────────────────────────
+router.get('/watch/:malId/:episode', async (req: Request, res: Response) => {
     try {
-        const { anilistId, episode } = req.params
+        const { malId, episode } = req.params
         const epNum = parseInt(episode)
 
-        // Get the anime title from AniList to search on streaming providers
-        const data = await anilistQuery(`
-            query ($id: Int) {
-                Media(id: $id, type: ANIME) {
-                    title { romaji english }
-                    idMal
-                }
-            }
-        `, { id: parseInt(anilistId) })
+        // 1. Get anime title from Jikan
+        const data = await jikanFetch(`/anime/${malId}`)
+        const anime = data.data
+        if (!anime) { res.status(404).json({ error: 'Anime not found' }); return }
+        const titles = [anime.title_english, anime.title, anime.title_japanese].filter(Boolean)
 
-        const title = data?.Media?.title?.english || data?.Media?.title?.romaji
-        if (!title) { res.status(404).json({ error: 'Anime not found' }); return }
-
-        // Try multiple providers in order
+        // 2. Try working providers from my test
         const providers = [
-            { name: 'AnimePahe', instance: new ANIME.AnimePahe() },
-            { name: 'AnimeKai', instance: new ANIME.AnimeKai() },
+            { name: 'AnimeSaturn', instance: new ANIME.AnimeSaturn() },
+            { name: 'AnimeUnity', instance: new ANIME.AnimeUnity() },
         ]
 
         for (const provider of providers) {
             try {
-                console.log(`[Anime] Trying ${provider.name} for "${title}" ep ${epNum}...`)
-                const searchResults = await provider.instance.search(title)
-                const match = searchResults.results?.[0]
-                if (!match) continue
+                console.log(`[Anime] Trying provider ${provider.name}`)
+                for (const titleToSearch of titles) {
+                    console.log(`[Anime] Searching ${provider.name} for "${titleToSearch}" ep ${epNum}`)
+                    const searchResults = await provider.instance.search(titleToSearch)
+                    
+                    const match = searchResults.results?.find((r: any) => {
+                        const target = titleToSearch.toLowerCase()
+                        const found = (r.title || '').toLowerCase()
+                        return found.includes(target) || target.includes(found)
+                    }) || searchResults.results?.[0]
 
-                const info = await provider.instance.fetchAnimeInfo(match.id)
-                const ep = info.episodes?.find((e: any) => e.number === epNum)
-                if (!ep) continue
+                    if (!match) continue
+                    console.log(`[Anime] Found match on ${provider.name}: "${match.title}" (ID: ${match.id})`)
+                    
+                    const info = await provider.instance.fetchAnimeInfo(match.id)
+                    const ep = info.episodes?.find((e: any) => e.number === epNum || e.number === epNum.toString())
+                    
+                    if (!ep) {
+                        console.log(`[Anime] Episode ${epNum} not found in ${provider.name} results`)
+                        continue
+                    }
 
-                const sources = await provider.instance.fetchEpisodeSources(ep.id)
-                if (sources?.sources?.length > 0) {
-                    console.log(`[Anime] ✅ Got sources from ${provider.name}`)
-                    res.json({
-                        data: {
-                            sources: sources.sources,
-                            subtitles: sources.subtitles || [],
-                            provider: provider.name,
-                        }
-                    })
-                    return
+                    const sources = await provider.instance.fetchEpisodeSources(ep.id)
+                    if (sources?.sources?.length > 0) {
+                        console.log(`[Anime] ✅ Found sources from ${provider.name}`)
+                        res.json({
+                            data: {
+                                sources: sources.sources,
+                                title: `${anime.title} - Episode ${epNum}`,
+                                provider: provider.name,
+                            }
+                        })
+                        return
+                    }
                 }
             } catch (e: any) {
-                console.warn(`[Anime] ${provider.name} failed:`, e.message)
+                console.warn(`[Anime] ${provider.name} error:`, e.message)
             }
         }
-
-        res.status(404).json({ error: 'No streaming sources found. Try a different episode or anime.' })
     } catch (error: any) {
-        console.error('Anime watch error:', error.message)
+        console.error('[Anime] Watch route error:', error.message)
         res.status(500).json({ error: 'Failed to get streaming links' })
     }
 })
 
-// ─── Helper: map AniList media to our format ─────────────────────────────
-function mapAnilistMedia(media: any) {
+function mapJikanAnime(anime: any) {
     return {
-        id: media.id.toString(),
-        title: media.title?.english || media.title?.romaji || 'Unknown',
-        image: media.coverImage?.extraLarge || media.coverImage?.large || '',
-        cover: media.bannerImage || '',
-        description: media.description || '',
-        genres: media.genres || [],
-        rating: media.averageScore ? (media.averageScore / 10).toFixed(1) : null,
-        popularity: media.popularity,
-        totalEpisodes: media.episodes,
-        status: media.status,
-        season: media.season,
-        seasonYear: media.seasonYear,
-        format: media.format,
-        studio: media.studios?.nodes?.[0]?.name || null,
-        nextAiring: media.nextAiringEpisode || null,
+        id: anime.mal_id.toString(),
+        title: anime.title_english || anime.title,
+        image: anime.images?.jpg?.large_image_url || anime.images?.jpg?.image_url || '',
+        cover: anime.images?.jpg?.large_image_url || '',
+        rating: anime.score ? anime.score.toString() : null,
+        totalEpisodes: anime.episodes,
+        status: anime.status,
+        format: anime.type,
+        season: anime.season,
+        seasonYear: anime.year,
+        studio: anime.studios?.[0]?.name || null,
+        popularity: anime.members
     }
 }
 
