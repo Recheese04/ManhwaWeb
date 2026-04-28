@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express'
 import { ANIME } from '@consumet/extensions'
 
 const router = Router()
-const gogoanime = new ANIME.Gogoanime()
+const hianime = new ANIME.Hianime()
 
 /**
  * GET /api/anime/search?q=...
@@ -14,7 +14,7 @@ router.get('/search', async (req: Request, res: Response) => {
             res.status(400).json({ error: 'Missing search query' })
             return
         }
-        const results = await gogoanime.search(q.toString())
+        const results = await hianime.search(q.toString())
         res.json({ data: results.results || [] })
     } catch (error: any) {
         console.error('Anime search error:', error.message)
@@ -27,7 +27,7 @@ router.get('/search', async (req: Request, res: Response) => {
  */
 router.get('/popular', async (_req: Request, res: Response) => {
     try {
-        const results = await gogoanime.fetchTopAiring()
+        const results = await hianime.fetchTopAiring()
         res.json({ data: results.results || [] })
     } catch (error: any) {
         console.error('Anime popular error:', error.message)
@@ -41,7 +41,7 @@ router.get('/popular', async (_req: Request, res: Response) => {
 router.get('/info/:id', async (req: Request, res: Response) => {
     try {
         const { id } = req.params
-        const info = await gogoanime.fetchAnimeInfo(id)
+        const info = await hianime.fetchAnimeInfo(id)
         res.json({ data: info })
     } catch (error: any) {
         console.error('Anime info error:', error.message)
@@ -55,7 +55,7 @@ router.get('/info/:id', async (req: Request, res: Response) => {
 router.get('/watch/:episodeId', async (req: Request, res: Response) => {
     try {
         const { episodeId } = req.params
-        const sources = await gogoanime.fetchEpisodeSources(episodeId)
+        const sources = await hianime.fetchEpisodeSources(episodeId)
         res.json({ data: sources })
     } catch (error: any) {
         console.error('Anime watch error:', error.message)
