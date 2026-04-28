@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: manhwaweb
+    runtime: docker
+    plan: free
+    # Root directory for the backend service
+    rootDir: server
+    # Context for Docker build (relative to rootDir)
+    dockerContext: .
+    dockerfilePath: Dockerfile
+    envVars:
+      - key: PORT
+        value: 3001
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
+
+  - type: static
+    name: manhwaweb-ui
+    runtime: static
+    buildCommand: npm install && npm run build
+    staticPublishDir: dist
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=0, must-revalidate
+    routes:
+      - type: rewrite
+        source: /api/*
+        # This will point to the web service above
+        destination: https://manhwaweb.onrender.com/api/*
+      - type: rewrite
+        source: /*
+        destination: /index.html

@@ -20,8 +20,11 @@ app.use(cors({
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true)
 
-        // Allow localhost and vercel domains
-        if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app') || origin.includes('recyglen')) {
+        // Allow localhost, vercel, and render domains
+        if (allowedOrigins.includes(origin) ||
+            origin.endsWith('.vercel.app') ||
+            origin.endsWith('.onrender.com') ||
+            origin.includes('recyglen')) {
             return callback(null, true)
         }
 
