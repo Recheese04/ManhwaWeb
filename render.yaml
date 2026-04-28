@@ -22,7 +22,7 @@ services:
     name: manhwaweb-ui
     runtime: static
     buildCommand: npm install && npm run build
-    staticPublishDir: dist
+    staticPublishPath: dist
     headers:
       - path: /*
         name: Cache-Control
