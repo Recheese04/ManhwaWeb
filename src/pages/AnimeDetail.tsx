@@ -1,41 +1,54 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { Play, Calendar, Star, Info, List, ArrowLeft } from 'lucide-react'
+import { Play, Calendar, Star, Info, List, ArrowLeft, Tv, Users, Filter } from 'lucide-react'
 
 interface Episode {
     id: string
     number: number
-    url: string
+    title: string
+    isFiller: boolean
 }
 
 interface AnimeInfo {
     id: string
-    title: string | { english?: string; romaji?: string; native?: string }
+    title: string
     image: string
+    cover: string
     description: string
-    releaseDate: string
-    type: string
-    status: string
     genres: string[]
+    rating: string | null
+    popularity: number
+    totalEpisodes: number | null
+    status: string
+    season: string
+    seasonYear: number
+    format: string
+    studio: string | null
     episodes: Episode[]
+    idMal: number | null
 }
 
 const AnimeDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>()
     const [info, setInfo] = useState<AnimeInfo | null>(null)
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState('')
+    const [showFillerFilter, setShowFillerFilter] = useState(false)
 
     useEffect(() => {
-        fetchInfo()
+        if (id) fetchInfo()
     }, [id])
 
     const fetchInfo = async () => {
+        setLoading(true)
+        setError('')
         try {
             const res = await fetch(`/api/anime/info/${id}`)
             const data = await res.json()
+            if (data.error) throw new Error(data.error)
             setInfo(data.data)
-        } catch (err) {
-            console.error(err)
+        } catch (err: any) {
+            setError(err.message)
         } finally {
             setLoading(false)
         }
@@ -47,81 +60,139 @@ const AnimeDetail: React.FC = () => {
         </div>
     )
 
-    if (!info) return <div className="min-h-screen bg-slate-950 text-white p-20 text-center">Anime not found</div>
+    if (error || !info) return (
+        <div className="min-h-screen bg-slate-950 text-white p-20 text-center">
+            <Tv size={64} className="mx-auto mb-4 opacity-20" />
+            <p className="text-xl font-bold text-red-400">{error || 'Anime not found'}</p>
+            <Link to="/anime" className="mt-6 inline-block text-sky-400 hover:underline">← Back to Anime</Link>
+        </div>
+    )
 
-    const title = typeof info.title === 'string' ? info.title : info.title.english || info.title.romaji || 'Unknown Title'
+    const displayedEpisodes = showFillerFilter
+        ? info.episodes.filter(ep => !ep.isFiller)
+        : info.episodes
 
     return (
         <div className="min-h-screen bg-slate-950 text-white pb-20">
             {/* Backdrop */}
-            <div className="relative h-[50vh] w-full">
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent z-10" />
-                <img src={info.image} className="w-full h-full object-cover opacity-30 blur-sm" alt="Backdrop" />
-                <Link to="/anime" className="absolute top-8 left-8 z-20 flex items-center gap-2 bg-slate-900/50 hover:bg-slate-800 px-4 py-2 rounded-xl backdrop-blur-md transition-all">
-                    <ArrowLeft size={20} /> Back
+            <div className="relative h-[45vh] w-full">
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/50 to-transparent z-10" />
+                {info.cover ? (
+                    <img src={info.cover} className="w-full h-full object-cover opacity-40 blur-sm" alt="Backdrop" />
+                ) : (
+                    <img src={info.image} className="w-full h-full object-cover opacity-20 blur-sm" alt="Backdrop" />
+                )}
+                <Link to="/anime" className="absolute top-8 left-8 z-20 flex items-center gap-2 bg-slate-900/60 hover:bg-slate-800 px-4 py-2 rounded-xl backdrop-blur-md transition-all text-sm font-medium">
+                    <ArrowLeft size={18} /> Back
                 </Link>
             </div>
 
-            <div className="max-w-7xl mx-auto px-6 -mt-60 relative z-20">
+            <div className="max-w-7xl mx-auto px-6 -mt-56 relative z-20">
                 <div className="flex flex-col md:flex-row gap-8 items-start">
                     {/* Poster */}
-                    <div className="w-64 shrink-0 mx-auto md:mx-0">
-                        <div className="rounded-2xl overflow-hidden border-2 border-slate-800 shadow-2xl">
-                            <img src={info.image} className="w-full object-cover" alt={title} />
+                    <div className="w-48 md:w-64 shrink-0 mx-auto md:mx-0">
+                        <div className="rounded-2xl overflow-hidden border-2 border-slate-800 shadow-2xl shadow-black/50">
+                            <img src={info.image} className="w-full object-cover" alt={info.title} />
                         </div>
                     </div>
 
                     {/* Details */}
-                    <div className="flex-1">
-                        <h1 className="text-4xl md:text-5xl font-black mb-4 leading-tight">{title}</h1>
-                        
-                        <div className="flex flex-wrap gap-4 mb-6">
-                            <div className="flex items-center gap-2 bg-sky-500/10 text-sky-400 px-3 py-1 rounded-full text-sm font-medium">
-                                <Star size={16} fill="currentColor" /> {info.type}
-                            </div>
-                            <div className="flex items-center gap-2 bg-green-500/10 text-green-400 px-3 py-1 rounded-full text-sm font-medium">
-                                <Calendar size={16} /> {info.releaseDate}
-                            </div>
-                            <div className="bg-slate-800 px-3 py-1 rounded-full text-sm font-medium">
-                                {info.status}
-                            </div>
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="text-xs uppercase tracking-widest text-sky-400 font-semibold bg-sky-500/10 px-3 py-1 rounded-full">{info.format}</span>
+                            <span className={`text-xs uppercase tracking-widest font-semibold px-3 py-1 rounded-full ${
+                                info.status === 'RELEASING' ? 'bg-green-500/10 text-green-400' :
+                                info.status === 'FINISHED' ? 'bg-slate-800 text-slate-400' :
+                                'bg-yellow-500/10 text-yellow-400'
+                            }`}>{info.status}</span>
                         </div>
 
-                        <div className="flex flex-wrap gap-2 mb-8">
+                        <h1 className="text-3xl md:text-5xl font-black mb-4 leading-tight">{info.title}</h1>
+
+                        <div className="flex flex-wrap gap-3 mb-6">
+                            {info.rating && (
+                                <div className="flex items-center gap-1.5 bg-amber-500/10 text-amber-400 px-3 py-1.5 rounded-full text-sm font-semibold">
+                                    <Star size={14} fill="currentColor" /> {info.rating}/10
+                                </div>
+                            )}
+                            {info.seasonYear && (
+                                <div className="flex items-center gap-1.5 bg-slate-800 px-3 py-1.5 rounded-full text-sm text-slate-300">
+                                    <Calendar size={14} /> {info.season} {info.seasonYear}
+                                </div>
+                            )}
+                            {info.popularity && (
+                                <div className="flex items-center gap-1.5 bg-slate-800 px-3 py-1.5 rounded-full text-sm text-slate-300">
+                                    <Users size={14} /> {info.popularity.toLocaleString()} fans
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 mb-6">
                             {info.genres.map(genre => (
-                                <span key={genre} className="bg-slate-900 border border-slate-800 px-4 py-1 rounded-lg text-sm hover:border-sky-500/50 transition-colors cursor-default">
+                                <span key={genre} className="bg-slate-900 border border-slate-700 px-3 py-1 rounded-lg text-xs font-medium text-slate-300">
                                     {genre}
                                 </span>
                             ))}
                         </div>
 
-                        <div className="bg-slate-900/50 backdrop-blur-md border border-slate-800 p-6 rounded-2xl mb-8">
-                            <h3 className="text-lg font-bold flex items-center gap-2 mb-3">
-                                <Info size={18} className="text-sky-400" /> Synopsis
-                            </h3>
-                            <p className="text-slate-300 leading-relaxed text-sm md:text-base italic" dangerouslySetInnerHTML={{ __html: info.description }} />
-                        </div>
+                        {info.description && (
+                            <div className="bg-slate-900/60 backdrop-blur-md border border-slate-800 p-5 rounded-2xl mb-6">
+                                <h3 className="text-sm font-bold flex items-center gap-2 mb-3 text-sky-400">
+                                    <Info size={16} /> Synopsis
+                                </h3>
+                                <p className="text-slate-300 leading-relaxed text-sm line-clamp-5">{info.description}</p>
+                            </div>
+                        )}
+
+                        {/* Watch First Episode CTA */}
+                        {info.episodes.length > 0 && (
+                            <Link
+                                to={`/anime/watch/${id}/1`}
+                                className="inline-flex items-center gap-2 bg-sky-500 hover:bg-sky-600 text-white font-bold px-8 py-4 rounded-2xl transition-all shadow-lg shadow-sky-500/25 hover:scale-105 active:scale-95"
+                            >
+                                <Play fill="white" size={20} /> Watch Episode 1
+                            </Link>
+                        )}
                     </div>
                 </div>
 
                 {/* Episodes List */}
-                <div className="mt-12">
-                    <h2 className="text-2xl font-bold flex items-center gap-2 mb-6">
-                        <List className="text-sky-400" /> Episodes ({info.episodes.length})
-                    </h2>
-                    
-                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
-                        {info.episodes.map(ep => (
-                            <Link 
-                                key={ep.id} 
-                                to={`/anime/watch/${ep.id}?animeId=${info.id}`}
-                                className="bg-slate-900 border border-slate-800 hover:border-sky-500 hover:bg-sky-500/10 transition-all rounded-xl py-3 text-center font-bold"
+                {info.episodes.length > 0 && (
+                    <div className="mt-12">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-2xl font-bold flex items-center gap-2">
+                                <List className="text-sky-400" /> Episodes ({info.episodes.length})
+                            </h2>
+                            <button
+                                onClick={() => setShowFillerFilter(!showFillerFilter)}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
+                                    showFillerFilter
+                                        ? 'bg-sky-500/10 border-sky-500/50 text-sky-400'
+                                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
+                                }`}
                             >
-                                Ep {ep.number}
-                            </Link>
-                        ))}
+                                <Filter size={16} /> Hide Filler
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-8 lg:grid-cols-10 gap-2">
+                            {displayedEpisodes.map(ep => (
+                                <Link
+                                    key={ep.id}
+                                    to={`/anime/watch/${id}/${ep.number}`}
+                                    title={ep.title}
+                                    className={`py-3 text-center font-bold rounded-xl transition-all text-sm hover:scale-105 ${
+                                        ep.isFiller
+                                            ? 'bg-slate-900/50 border border-slate-800/50 text-slate-600 hover:border-yellow-500/40 hover:text-yellow-500/70'
+                                            : 'bg-slate-900 border border-slate-800 hover:border-sky-500 hover:bg-sky-500/10 hover:text-sky-400'
+                                    }`}
+                                >
+                                    {ep.number}
+                                </Link>
+                            ))}
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
         </div>
     )
