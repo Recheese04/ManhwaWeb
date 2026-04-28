@@ -89,24 +89,17 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
     res.status(500).json({ error: 'Internal server error' })
 })
 
-// Start server
-app.listen(PORT as number, '0.0.0.0', () => {
-    console.log(`
+// Export for Vercel
+export default app
+
+// Start server (only if not in Vercel)
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+    app.listen(PORT as number, '0.0.0.0', () => {
+        console.log(`
 ╔══════════════════════════════════════════╗
 ║     ManhwaWeb API Server                 ║
 ║     Running on http://0.0.0.0:${PORT}        ║
 ╚══════════════════════════════════════════╝
   `)
-    console.log('Routes:')
-    console.log('  GET  /api/health')
-    console.log('  GET  /api/manga/search?q=...')
-    console.log('  GET  /api/manga/popular')
-    console.log('  GET  /api/manga/latest')
-    console.log('  GET  /api/manga/:id')
-    console.log('  GET  /api/manga/:id/chapters')
-    console.log('  GET  /api/manga/chapter/:id/pages')
-    console.log('  GET  /api/user/profile         (auth)')
-    console.log('  POST /api/user/bookmark/:id     (auth)')
-    console.log('  POST /api/user/favorite/:id     (auth)')
-    console.log('  POST /api/user/reading-history  (auth)')
-})
+    })
+}

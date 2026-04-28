@@ -26,7 +26,14 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.28.0",
-    "tailwind-merge": "^2.6.0"
+    "tailwind-merge": "^2.6.0",
+    "@consumet/extensions": "^1.8.8",
+    "cheerio": "^1.2.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "firebase-admin": "^12.6.0",
+    "node-fetch": "^2.7.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.13.0",
