@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import {
     Star, Eye, TrendingUp, Clock, Sparkles, ChevronRight, ChevronLeft,
-    BookOpen, ArrowRight, Play, Flame, Loader2
+    BookOpen, ArrowRight, Play, Flame, Loader2, Tv
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -152,6 +152,19 @@ export default function Home() {
                                     >
                                         {currentManga.title}
                                     </h1>
+                                    
+                                    <Link to="/browse">
+                                        <Button size="lg" className="h-12 px-8 rounded-xl text-base font-bold gradient-primary shadow-lg shadow-sky-500/25 group transition-all duration-300 hover:scale-105 active:scale-95">
+                                            Browse Manga
+                                            <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                        </Button>
+                                    </Link>
+                                    <Link to="/anime">
+                                        <Button size="lg" variant="outline" className="h-12 px-8 rounded-xl text-base font-bold border-slate-700 bg-slate-900/50 backdrop-blur-md hover:bg-sky-500/10 hover:border-sky-500/50 transition-all duration-300 hover:scale-105 active:scale-95 text-slate-200">
+                                            <Tv className="mr-2 w-5 h-5 text-sky-400" />
+                                            Watch Anime
+                                        </Button>
+                                    </Link>
 
                                     <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 mb-4 text-sm">
                                         {currentManga.rating > 0 && (
