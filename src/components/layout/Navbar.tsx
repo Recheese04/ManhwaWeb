@@ -13,6 +13,7 @@ import MobileDrawer from './MobileDrawer'
 const navLinks = [
     { label: 'Home', path: '/' },
     { label: 'Browse', path: '/browse' },
+    { label: 'Anime', path: '/anime' },
 ]
 
 const typeFilters = [

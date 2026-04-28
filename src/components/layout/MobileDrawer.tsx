@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { X, Home, Library, BookOpen, User, Heart, Clock, Settings } from 'lucide-react'
+import { X, Home, Library, BookOpen, User, Heart, Clock, Settings, Play } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { cn } from '@/lib/utils'
 
@@ -11,6 +11,7 @@ interface MobileDrawerProps {
 const drawerLinks = [
     { label: 'Home', path: '/', icon: Home },
     { label: 'Browse Library', path: '/browse', icon: Library },
+    { label: 'Anime', path: '/anime', icon: Play },
     { label: 'Manga', path: '/browse?type=manga', icon: BookOpen },
     { label: 'Manhwa', path: '/browse?type=manhwa', icon: BookOpen },
     { label: 'Manhua', path: '/browse?type=manhua', icon: BookOpen },

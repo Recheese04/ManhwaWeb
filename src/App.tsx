@@ -9,6 +9,10 @@ import Profile from '@/pages/Profile'
 import Login from '@/pages/Login'
 import Signup from '@/pages/Signup'
 
+import Anime from '@/pages/Anime'
+import AnimeDetail from '@/pages/AnimeDetail'
+import Watch from '@/pages/Watch'
+
 function MainLayout({ children }: { children: React.ReactNode }) {
     return (
         <>
@@ -39,6 +43,9 @@ export default function App() {
                             <Route path="/browse" element={<Browse />} />
                             <Route path="/manga/:slug" element={<TitleDetail />} />
                             <Route path="/profile" element={<Profile />} />
+                            <Route path="/anime" element={<Anime />} />
+                            <Route path="/anime/:id" element={<AnimeDetail />} />
+                            <Route path="/anime/watch/:episodeId" element={<Watch />} />
                         </Routes>
                     </MainLayout>
                 }

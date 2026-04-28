@@ -3,6 +3,7 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import mangaRoutes from './routes/manga.js'
 import userRoutes from './routes/user.js'
+import animeRoutes from './routes/anime.js'
 
 dotenv.config()
 
@@ -42,6 +43,7 @@ app.get('/api/health', (_req, res) => {
 // Routes
 app.use('/api/manga', mangaRoutes)
 app.use('/api/user', userRoutes)
+app.use('/api/anime', animeRoutes)
 
 /**
  * GET /api/img-proxy?url=<encoded-url>&ref=<encoded-referer>
