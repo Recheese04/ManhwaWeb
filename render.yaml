@@ -5,9 +5,9 @@ services:
     plan: free
     # Root directory for the backend service
     rootDir: server
-    # Context for Docker build (relative to rootDir)
-    dockerContext: .
-    dockerfilePath: Dockerfile
+    # Context for Docker build (relative to repo root)
+    dockerContext: server
+    dockerfilePath: server/Dockerfile
     envVars:
       - key: PORT
         value: 3001
