@@ -96,7 +96,7 @@ const Watch: React.FC = () => {
                     availableSources.find((s) => s.quality?.includes('1080') && s.quality?.toLowerCase().includes('english')) ||
                     availableSources.find((s) => s.quality === 'default' || s.quality === '1080p') ||
                     availableSources[0]
-                setCurrentSource(defaultSource)
+                setCurrentSource(defaultSource || null)
             }
         } catch (err: any) {
             setError(err.message || 'Failed to find streaming links for this episode.')
