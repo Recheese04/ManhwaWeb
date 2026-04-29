@@ -194,15 +194,13 @@ router.get('/watch/:malId/:episode', async (req: Request, res: Response) => {
             console.warn('[Anime] ani.zip mapping failed')
         }
 
-        // Ensure we always have at least one source (fallback)
-        if (sourcesList.length === 0) {
-            sourcesList.push({
-                url: `https://vidsrc.cc/v2/embed/anime/${malId}/${epNum}`,
-                quality: 'English Sub (Fallback)',
-                isEmbed: true,
-                provider: 'Server 1'
-            })
-        }
+        // Always include a direct MAL-based provider as a reliable fallback for long-running anime (e.g. One Piece)
+        sourcesList.push({
+            url: `https://vidsrc.cc/v2/embed/anime/${malId}/${epNum}`,
+            quality: 'English Sub',
+            isEmbed: true,
+            provider: `Server ${sourcesList.length + 1}`
+        })
 
         res.json({
             data: {
