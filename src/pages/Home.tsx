@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import {
     Star, Eye, TrendingUp, Clock, Sparkles, ChevronRight, ChevronLeft,
-    BookOpen, ArrowRight, Play, Flame, Loader2, Tv
+    BookOpen, ArrowRight, Play, Flame, Loader2, Tv, AlertCircle
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -36,8 +36,8 @@ export default function Home() {
     const [activeTab, setActiveTab] = useState<TabType>('all')
     const [currentSlide, setCurrentSlide] = useState(0)
 
-    const { data: popular, loading: popularLoading } = usePopularManga()
-    const { data: latest, loading: latestLoading } = useLatestManga()
+    const { data: popular, loading: popularLoading, error: popularError } = usePopularManga()
+    const { data: latest, loading: latestLoading, error: latestError } = useLatestManga()
 
     // Use first 5 popular for carousel
     const carouselItems = popular.slice(0, 5)
@@ -85,9 +85,15 @@ export default function Home() {
         <div className="min-h-screen">
             {/* ============ HERO CAROUSEL ============ */}
             <section className="relative w-full h-[380px] sm:h-[500px] lg:h-[620px] overflow-hidden">
-                {popularLoading || !currentManga ? (
+                {popularLoading ? (
                     <div className="flex items-center justify-center h-full">
                         <Loader2 className="w-8 h-8 animate-spin text-sky-500" />
+                    </div>
+                ) : (popularError || !currentManga) ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center px-4">
+                        <AlertCircle className="w-12 h-12 text-rose-500 mb-4" />
+                        <h3 className="text-xl font-bold mb-2">Failed to load content</h3>
+                        <p className="text-muted-foreground">{popularError || 'Could not find any anime content.'}</p>
                     </div>
                 ) : (
                     <>
@@ -301,9 +307,11 @@ export default function Home() {
                 <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-5">
                     {popularLoading
                         ? Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)
-                        : trending.map((manga, i) => (
-                            <MangaCard key={manga.id} manga={manga} rank={i + 1} />
-                        ))}
+                        : (popularError || trending.length === 0)
+                            ? <div className="col-span-full py-10 text-center text-muted-foreground">No popular anime found.</div>
+                            : trending.map((manga, i) => (
+                                <MangaCard key={manga.id} manga={manga} rank={i + 1} />
+                            ))}
                 </div>
             </section>
 
@@ -323,9 +331,11 @@ export default function Home() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
                     {latestLoading
                         ? Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-36 rounded-xl" />)
-                        : latestUpdates.map(manga => (
-                            <MangaCard key={manga.id} manga={manga} variant="wide" />
-                        ))}
+                        : (latestError || latestUpdates.length === 0)
+                            ? <div className="col-span-full py-10 text-center text-muted-foreground">No recent updates found.</div>
+                            : latestUpdates.map(manga => (
+                                <MangaCard key={manga.id} manga={manga} variant="wide" />
+                            ))}
                 </div>
             </section>
 
