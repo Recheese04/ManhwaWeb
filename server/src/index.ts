@@ -1,14 +1,20 @@
-import express from 'express'
-import cors from 'cors'
-import dotenv from 'dotenv'
-import { Readable } from 'stream'
-import mangaRoutes from './routes/manga.js'
-import userRoutes from './routes/user.js'
-import animeRoutes from './routes/anime.js'
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { Readable } from 'stream';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const compression = require('compression');
+import mangaRoutes from './routes/manga.js';
+import userRoutes from './routes/user.js';
+import animeRoutes from './routes/anime.js';
+
+const app = express();
+app.use(compression()); // gzip compression for all responses
 
 dotenv.config()
 
-const app = express()
+// Duplicate app declaration removed
 const PORT = process.env.PORT || 3001
 
 // Middleware
@@ -34,8 +40,13 @@ app.use(cors({
     },
     credentials: true,
 }))
-app.use(express.json())
+app.use(express.json());
 
+// Cache JSON API responses for 60 seconds to reduce repeat fetches
+app.use('/api', (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  res.setHeader('Cache-Control', 'public, max-age=60');
+  next();
+});
 // Health check
 app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() })
@@ -44,18 +55,20 @@ app.get('/api/health', (_req, res) => {
 // Routes
 // Stream proxy – fetches video/audio streams server‑side to avoid CORS & hotlink blocks
 app.get('/api/stream-proxy', async (req: express.Request, res: express.Response) => {
-    const { url } = req.query as { url?: string }
+    const { url, ref } = req.query as { url?: string, ref?: string }
     if (!url) {
         res.status(400).json({ error: 'Missing url parameter' })
         return
     }
     try {
-        const upstream = await fetch(url, {
-            headers: {
-                // Some providers require a referer or user‑agent
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            },
-        })
+        const headers: Record<string, string> = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        }
+        if (ref) {
+            headers['Referer'] = ref
+        }
+
+        const upstream = await fetch(url, { headers })
 
         if (!upstream.ok) {
             console.error(`Stream proxy: Upstream returned ${upstream.status} for ${url}`)
@@ -76,7 +89,7 @@ app.get('/api/stream-proxy', async (req: express.Request, res: express.Response)
                         return line;
                     }
                     const absolute = new URL(trimmed, base).toString();
-                    return `/api/stream-proxy?url=${encodeURIComponent(absolute)}`;
+                    return `/api/stream-proxy?url=${encodeURIComponent(absolute)}${ref ? `&ref=${encodeURIComponent(ref)}` : ''}`;
                 })
                 .join('\n');
             res.setHeader('Content-Type', contentType);

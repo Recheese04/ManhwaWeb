@@ -1,5 +1,4 @@
 import { Router, Request, Response } from 'express'
-import { ANIME } from '@consumet/extensions'
 
 const router = Router()
 
@@ -132,67 +131,88 @@ router.get('/info/:id', async (req: Request, res: Response) => {
 })
 
 // ─── Watch ────────────────────────────────────────────────────────────────
+// Primary: anime-specific embeds (s3taku/gogoanime) using romaji title slugs.
+// Backup: VidSrc with MAL→TMDB conversion via ani.zip.
 router.get('/watch/:malId/:episode', async (req: Request, res: Response) => {
     try {
         const { malId, episode } = req.params
         const epNum = parseInt(episode)
-
-        // 1. Get anime title from Jikan
         const data = await jikanFetch(`/anime/${malId}`)
         const anime = data.data
         if (!anime) { res.status(404).json({ error: 'Anime not found' }); return }
-        const titles = [anime.title_english, anime.title, anime.title_japanese].filter(Boolean)
 
-        // 2. Try working providers from my test
-        const providers = [
-            { name: 'AnimeSaturn', instance: new ANIME.AnimeSaturn() },
-            { name: 'AnimeUnity', instance: new ANIME.AnimeUnity() },
-        ]
+        const sourcesList: any[] = []
 
-        for (const provider of providers) {
-            try {
-                console.log(`[Anime] Trying provider ${provider.name}`)
-                for (const titleToSearch of titles) {
-                    console.log(`[Anime] Searching ${provider.name} for "${titleToSearch}" ep ${epNum}`)
-                    const searchResults = await provider.instance.search(titleToSearch)
-                    
-                    const match = searchResults.results?.find((r: any) => {
-                        const target = titleToSearch.toLowerCase()
-                        const found = (r.title || '').toLowerCase()
-                        return found.includes(target) || target.includes(found)
-                    }) || searchResults.results?.[0]
+        // Convert MAL ID → TMDB ID + season/episode mapping via ani.zip
+        try {
+            const mapRes = await fetch(`https://api.ani.zip/mappings?mal_id=${malId}`)
+            if (mapRes.ok) {
+                const mapData = await mapRes.json()
+                const tmdbId = mapData.mappings?.themoviedb_id
 
-                    if (!match) continue
-                    console.log(`[Anime] Found match on ${provider.name}: "${match.title}" (ID: ${match.id})`)
-                    
-                    const info = await provider.instance.fetchAnimeInfo(match.id)
-                    const ep = info.episodes?.find((e: any) => e.number === epNum || e.number === epNum.toString())
-                    
-                    if (!ep) {
-                        console.log(`[Anime] Episode ${epNum} not found in ${provider.name} results`)
-                        continue
+                if (tmdbId) {
+                    // Get correct TMDB season/episode
+                    const epMapping = mapData.episodes?.[String(epNum)]
+                    let tmdbSeason = epMapping?.seasonNumber || 1
+                    let tmdbEpisode = epMapping?.episodeNumber || epNum
+
+                    // Special case: The Disastrous Life of Saiki K (MAL: 33255, TMDB: 67676)
+                    // MAL has 120 shorts in S1, but TMDB combines 5 shorts into 1 episode (24 total)
+                    if (malId === '33255') {
+                        tmdbSeason = 1
+                        tmdbEpisode = Math.ceil(epNum / 5)
                     }
 
-                    const sources = await provider.instance.fetchEpisodeSources(ep.id)
-                    if (sources?.sources?.length > 0) {
-                        console.log(`[Anime] ✅ Found sources from ${provider.name}`)
-                        res.json({
-                            data: {
-                                sources: sources.sources,
-                                title: `${anime.title} - Episode ${epNum}`,
-                                provider: provider.name,
-                            }
-                        })
-                        return
-                    }
+                    console.log(`[Anime] MAL ${malId} → TMDB ${tmdbId} (S${tmdbSeason}E${tmdbEpisode})`)
+
+                    // 1. Primary: vidlink.pro
+                    sourcesList.push({
+                        url: `https://vidlink.pro/tv/${tmdbId}/${tmdbSeason}/${tmdbEpisode}`,
+                        quality: 'English Sub',
+                        isEmbed: true,
+                        provider: 'Server 1'
+                    })
+
+                    // 2. Secondary: multiembed.mov
+                    sourcesList.push({
+                        url: `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1&s=${tmdbSeason}&e=${tmdbEpisode}`,
+                        quality: 'English Sub',
+                        isEmbed: true,
+                        provider: 'Server 2'
+                    })
+
+                    // 3. Tertiary: moviesapi.club
+                    sourcesList.push({
+                        url: `https://moviesapi.club/tv/${tmdbId}-${tmdbSeason}-${tmdbEpisode}`,
+                        quality: 'English Sub',
+                        isEmbed: true,
+                        provider: 'Server 3'
+                    })
                 }
-            } catch (e: any) {
-                console.warn(`[Anime] ${provider.name} error:`, e.message)
             }
+        } catch (e) {
+            console.warn('[Anime] ani.zip mapping failed')
         }
+
+        // Ensure we always have at least one source (fallback)
+        if (sourcesList.length === 0) {
+            sourcesList.push({
+                url: `https://vidsrc.cc/v2/embed/anime/${malId}/${epNum}`,
+                quality: 'English Sub (Fallback)',
+                isEmbed: true,
+                provider: 'Server 1'
+            })
+        }
+
+        res.json({
+            data: {
+                sources: sourcesList,
+                title: `${anime.title_english || anime.title} - Episode ${epNum}`,
+            }
+        })
     } catch (error: any) {
-        console.error('[Anime] Watch route error:', error.message)
-        res.status(500).json({ error: 'Failed to get streaming links' })
+        console.error('[Anime] Watch Error:', error)
+        res.status(500).json({ error: 'Failed to fetch streaming sources' })
     }
 })
 

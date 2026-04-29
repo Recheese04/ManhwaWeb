@@ -94,24 +94,25 @@ const AnimeDetail: React.FC = () => {
     return (
         <div className="min-h-screen bg-slate-950 text-white pb-20">
             {/* Backdrop */}
-            <div className="relative h-[45vh] w-full">
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/50 to-transparent z-10" />
+            <div className="relative h-[55vh] w-full">
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent z-10" />
+                <div className="absolute inset-0 bg-slate-950/40 z-10" />
                 {info.cover ? (
-                    <img src={info.cover} className="w-full h-full object-cover opacity-40 blur-sm" alt="Backdrop" />
+                    <img src={`/api/img-proxy?url=${encodeURIComponent(info.cover)}`} className="w-full h-full object-cover opacity-60 blur-[2px]" alt="Backdrop" />
                 ) : (
-                    <img src={info.image} className="w-full h-full object-cover opacity-20 blur-sm" alt="Backdrop" />
+                    <img src={`/api/img-proxy?url=${encodeURIComponent(info.image)}`} className="w-full h-full object-cover opacity-40 blur-[2px]" alt="Backdrop" />
                 )}
-                <Link to="/anime" className="absolute top-8 left-8 z-20 flex items-center gap-2 bg-slate-900/60 hover:bg-slate-800 px-4 py-2 rounded-xl backdrop-blur-md transition-all text-sm font-medium">
-                    <ArrowLeft size={18} /> Back
+                <Link to="/anime" className="absolute top-8 left-8 z-20 flex items-center gap-2 bg-white/10 hover:bg-white/20 px-5 py-2.5 rounded-2xl backdrop-blur-xl border border-white/10 transition-all text-sm font-bold group">
+                    <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> Back to Library
                 </Link>
             </div>
 
-            <div className="max-w-7xl mx-auto px-6 -mt-56 relative z-20">
-                <div className="flex flex-col md:flex-row gap-8 items-start">
+            <div className="max-w-7xl mx-auto px-6 -mt-64 relative z-20">
+                <div className="flex flex-col md:flex-row gap-10 items-start">
                     {/* Poster */}
-                    <div className="w-48 md:w-64 shrink-0 mx-auto md:mx-0">
-                        <div className="rounded-2xl overflow-hidden border-2 border-slate-800 shadow-2xl shadow-black/50">
-                            <img src={info.image} className="w-full object-cover" alt={info.title} />
+                    <div className="w-56 md:w-72 shrink-0 mx-auto md:mx-0 group">
+                        <div className="rounded-3xl overflow-hidden border border-white/10 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)] group-hover:scale-[1.02] transition-transform duration-500">
+                            <img src={`/api/img-proxy?url=${encodeURIComponent(info.image)}`} className="w-full aspect-[2/3] object-cover" alt={info.title} />
                         </div>
                     </div>
 
